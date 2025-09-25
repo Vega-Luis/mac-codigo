@@ -1,0 +1,12 @@
+hambriento #Inicio del programa #
+cocinar: #Punto de entrada del programa # 
+torta x <- 4, # variable tipo torta (int) con valor 4 #
+torta y <- 6, # variable tipo torta (int) con valor 6 #
+torta total <- x + y, # la variable total recibe el valor de la suma#
+servir("El total es: ",  total),	# imprime el resultado #
+¿si? total = 10:
+    		servir(mayonesa).
+¡de otro modo!:
+servir(ketchup)..
+
+satisfecho #Fin del programa #

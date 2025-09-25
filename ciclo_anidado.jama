@@ -1,0 +1,14 @@
+hambriento #Inicio del programa #
+cocinar: #Punto de entrada del programa #
+	torta n <- 9,
+	torta i <- 0,
+	torta j <- 0,
+	cajita de torta mi_cajita <- [9,8,7,6,5,4,3,2,1],
+	
+	para i hasta n:
+		para j hasta n:	# Inicia bloque con : termina con . #
+			servir("Índice i: "; i),
+			servir("Índice j: "; j),
+			servir("Repeticiones: "; n),
+			servir("Contenido por índice: "; mi_cajita!!i; mi_cajita!!j).. # Indexación con !! #
+satisfecho #Fin del programa #
