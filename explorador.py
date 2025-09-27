@@ -43,9 +43,11 @@ class ExploradorMacCodigo:
         (TipoComponente.REPETICION, r'^(para|hasta)\b'),
         (TipoComponente.ASIGNACION, r'^<-'),
         (TipoComponente.OPERADOR, r'^(mul|div|mod|\+|-)\b'),
+        (TipoComponente.OPERADOR, r'^!!'),
+
         (TipoComponente.COMPARADOR, r'^(=|!=|<=|>=|<|>)'),
         (TipoComponente.TIPO, r'^(torta|lechuga|pepinillo|tomate|salsa|hamburguesa|cajita)\b'),
-        (TipoComponente.BOOLEANO, r'^(mayonesa|ketchup)\b'),
+        (TipoComponente.OPERADOR, r'^(mul|div|mod|\+|-)'),
         (TipoComponente.FLOTANTE, r'^-?\d+\.\d+'),
         (TipoComponente.ENTERO, r'^-?\d+'),
         (TipoComponente.CARACTER, r"^'[^']'"),
