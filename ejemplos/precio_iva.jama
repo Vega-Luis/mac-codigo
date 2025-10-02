@@ -1,0 +1,10 @@
+hambriento #Inicio del programa #
+cocinar:
+    lechuga precio <- 100.00,
+    lechuga iva <- 13.00,
+    lechuga total <- precio + iva,
+    
+    servir("Precio sin IVA: "; precio),
+    servir("IVA: "; iva),
+    servir("Total a pagar: "; total)..
+satisfecho #Fin del programa #
