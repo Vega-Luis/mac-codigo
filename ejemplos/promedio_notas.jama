@@ -1,0 +1,20 @@
+hambriento #Inicio del programa #
+cocinar:
+    cajita de lechuga notas <- [85.5, 90.0, 78.5, 92.0, 88.5],
+    lechuga suma <- 0.0,
+    lechuga promedio <- 0.0,
+    torta i <- 0,
+    
+    para i hasta 5:
+        suma <- suma + notas!!i.
+    
+    promedio <- suma div 5,
+    
+    servir("Suma total: "; suma),
+    servir("Promedio: "; promedio),
+    
+    ¿si? promedio >= 85.0:
+        servir("Aprobado con honores")
+    ¡de otro modo!:
+        servir("Aprobado")..
+satisfecho #Fin del programa #

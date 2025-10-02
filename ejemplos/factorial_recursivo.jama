@@ -1,0 +1,15 @@
+hambriento #Inicio del programa #
+receta calcular_factorial(
+    torta n
+) -> torta:
+    ¿si? n <= 1:
+        entregar(1)
+    ¡de otro modo!:
+        entregar(n mul calcular_factorial(n - 1))..
+
+cocinar:
+    torta numero <- 5,
+    torta resultado <- calcular_factorial(numero),
+    
+    servir("El factorial de "; numero; " es: "; resultado)..
+satisfecho #Fin del programa #

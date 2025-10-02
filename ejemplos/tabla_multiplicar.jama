@@ -1,0 +1,10 @@
+hambriento #Inicio del programa #
+cocinar:
+    torta numero <- 7,
+    torta i <- 1,
+    
+    servir("Tabla de multiplicar del: "; numero),
+    
+    para i hasta 10:
+        servir(numero; " mul "; i; " = "; (numero mul i))..
+satisfecho #Fin del programa #
