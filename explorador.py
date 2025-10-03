@@ -3,6 +3,13 @@ from enum import Enum, auto as autogen
 
 
 class TipoComponente(Enum):
+    """
+    Definición  del conjunto de categorías léxicas para el lenguaje MacCódigo.
+
+    Este enum define los tipos de componentes léxicos que el explorador
+    puede identificar.
+    """
+
     COMENTARIO = autogen()
     PALABRA_CLAVE = autogen()
     FUNCION = autogen()
@@ -24,6 +31,21 @@ class TipoComponente(Enum):
 
 
 class ComponenteLexico:
+    """
+    Representa un componente léxico identificado en el código fuente.
+
+    Parametros
+    ----------
+    tipo : TipoComponente
+        El tipo del componente léxico (según el enum TipoComponente).
+    texto : str
+        El texto exacto del componente tal como aparece en el código fuente.
+    fila : int
+        La línea en la que se encuentra el componente.
+    col : int
+        La columna en la que comienza el componente.
+    """
+
     def __init__(self, tipo, texto, fila, col):
         self.tipo = tipo
         self.texto = texto
@@ -31,10 +53,25 @@ class ComponenteLexico:
         self.columna = col
 
     def __str__(self):
+        """
+        Representa el componente léxico como una cadena legible.
+        """
         return f"{self.tipo.name:<15} <{self.texto}> (línea {self.linea}, col {self.columna})"
 
 
 class ExploradorMacCodigo:
+    """
+    Explorador léxico para el lenguaje MacCódigo.
+
+    Se encarga de explorar el código fuente, identificar componentes léxicos y
+    reportar errores.
+
+    Parametros
+    ----------
+    fuente : str
+        El código fuente a explorar.
+    """
+
     # Descriptores de componentes (regex por prioridad)
     descriptores = [
         (TipoComponente.COMENTARIO, r'^#.*'),  # comentarios estilo # ...
@@ -64,6 +101,15 @@ class ExploradorMacCodigo:
         self.errores = []
 
     def explorar(self):
+        """
+        Explora el código fuente línea por línea, identificando componentes
+        léxicos y errores.
+
+        Retorna
+        -------
+        List[ComponenteLexico]
+            Una lista de componentes léxicos identificados en el código fuente.
+        """
         for i, contenido_linea in enumerate(self.lineas, start=1):
             col = 1
             linea_restante = contenido_linea
@@ -98,11 +144,17 @@ class ExploradorMacCodigo:
         return self.componentes
 
     def imprimir_componentes(self):
+        """
+        Imprime los componentes léxicos identificados en el código fuente.
+        """
         print("== Componentes Léxicos ==")
         for c in self.componentes:
             print(c)
 
     def imprimir_errores(self):
+        """
+        Imprime los errores léxicos encontrados durante la exploración.
+        """
         if self.errores:
             print("\n== Errores Encontrados ==")
             for e in self.errores:
@@ -113,6 +165,15 @@ class ExploradorMacCodigo:
 
 
 if __name__ == "__main__":
+    """
+    Punto de entrada del programa.
+
+    Uso:
+        python scanner_mac_codigo.py <archivo.mac>
+
+    Donde <archivo.mac> es un archivo de texto que contiene código
+    en el lenguaje 'MacCodigo'.
+    """
     import sys
     if len(sys.argv) < 2:
         print("Uso: python scanner_mac_codigo.py <archivo.mac>")
