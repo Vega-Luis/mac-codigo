@@ -6,14 +6,20 @@ Asimismo, se adaptaron los términos y estructuras del lenguaje al entorno de un
 
 En conjunto, la motivación detrás de Mac Código es ofrecer una herramienta didáctica que haga más accesible el aprendizaje de la **lógica de programación y la complejidad algorítmica**, especialmente en etapas tempranas de formación o en comunidades donde el lenguaje técnico puede ser una barrera. Con ello, se busca fomentar la comprensión y el interés en la programación a través de un enfoque intuitivo, divertido y significativo.
 
-## Estructrua de Carpetas y Archivos
+## Estructura de Carpetas y Archivos
+
+```text
 compilador/
-|
-├── ejemplos/ # Ejemplos de código en lenguaje MacCódigo
-| ├── ejemplos.jama
-| ├── .....
+│
+├── ejemplos/                # Ejemplos de código en lenguaje MacCódigo
+│   ├── ejemplo1.mac
+│   ├── ejemplo2.mac
+│   └── ...
+│
 ├── .gitignore
 ├── LICENSE
-├── README.md # Documentación principal del proyecto
-├── explorardor.py # Etapa de exploración del lenguaje.
+├── README.md                # Documentación principal del proyecto
+└── explorador.py            # Etapa de exploración (scanner / lexer)
+```
+
 
