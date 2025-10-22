@@ -2,7 +2,7 @@ hambriento #Inicio del programa #
 cocinar:
     hamburguesa combo <- {
         torta id <- 101,
-        tomate nombre <- "Big Mac",
+        tomate nombre <- "Big Mac",  //
         lechuga precio <- 5.99,
         salsa disponible <- mayonesa
     },

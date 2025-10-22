@@ -1,3 +1,4 @@
+
 hambriento #Inicio del programa #
 cocinar: #Punto de entrada del programa #
 	torta n <- 9,
@@ -11,4 +12,7 @@ cocinar: #Punto de entrada del programa #
 			servir("Índice j: "; j),
 			servir("Repeticiones: "; n),
 			servir("Contenido por índice: "; mi_cajita!!i; mi_cajita!!j).. # Indexación con !! #
+
 satisfecho #Fin del programa #
+
+
