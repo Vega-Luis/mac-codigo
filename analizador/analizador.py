@@ -1,6 +1,9 @@
 from explorador.explorador import TipoComponente, ComponenteLexico
 from utils.arbol import TipoNodo, NodoArbol, ArbolSintaxisAbstracta
 from utils.tipo_datos import TipoDatos
+from explorador.explorador import ExploradorMacCodigo
+
+
 
 class AnalizadorMacCodigo:
     """
@@ -23,27 +26,34 @@ class AnalizadorMacCodigo:
     # === GRAMÁTICA PRINCIPAL ===
     def __analizar_programa(self):
         """
-        Programa ::= (Asignacion | Condicional | Repeticion | Funcion)* 
+        Programa ::= (Asignacion | Condicional | Repeticion | Funcion | InstruccionSimple)* 
         """
         nodos = []
 
         while self.componente_actual is not None:
-            if self.componente_actual.tipo == TipoComponente.ASIGNACION:
-                nodos.append(self.analizar_asignacion())
+            texto = self.componente_actual.texto
 
-            elif self.componente_actual.tipo == TipoComponente.FUNCION:
+            if texto == "receta":
                 nodos.append(self.analizar_funcion())
 
-            elif self.componente_actual.tipo == TipoComponente.CONDICIONAL:
+            elif texto in ["¿si?", "¡de otro modo!"]:
                 nodos.append(self.analizar_condicional())
 
-            elif self.componente_actual.tipo == TipoComponente.REPETICION:
+            elif texto in ["para", "hasta"]:
                 nodos.append(self.analizar_repeticion())
 
+            elif texto in ["servir", "cocinar", "entregar", "hambriento", "satisfecho"]:
+                nodos.append(self.analizar_instruccion_simple())
+
+            elif self.componente_actual.tipo in [TipoComponente.IDENTIFICADOR, TipoComponente.ASIGNACION]:
+                nodos.append(self.analizar_asignacion())
+
             else:
-                break
+                # avanza si no reconoce nada, evita bucle infinito
+                self.__siguiente()
 
         return NodoArbol(TipoNodo.PROGRAMA, nodos=nodos)
+
 
     # === ASIGNACIÓN ===
     def analizar_asignacion(self):
@@ -236,6 +246,47 @@ class AnalizadorMacCodigo:
             nodos.append(self.verificar_identificador())
         return NodoArbol(TipoNodo.PARAMETROS, nodos=nodos)
 
+
+    def analizar_instruccion_simple(self):
+        """
+        InstruccionSimple ::= PALABRA_CLAVE ( STRING | IDENTIFICADOR )*
+        """
+        palabra = self.componente_actual.texto
+        nodo_principal = NodoArbol(TipoNodo.EXPRESION, contenido=palabra)
+        self.__siguiente()
+
+        # Captura argumentos entre paréntesis si existen
+        if self.componente_actual and self.componente_actual.texto == "(":
+            self.__siguiente()
+            hijos = []
+            while self.componente_actual and self.componente_actual.texto != ")":
+                if self.componente_actual.tipo in (
+                    TipoComponente.STRING,
+                    TipoComponente.IDENTIFICADOR,
+                    TipoComponente.ENTERO,
+                    TipoComponente.FLOTANTE,
+                ):
+                    hijos.append(self.analizar_valor())
+                else:
+                    self.__siguiente()
+            nodo_principal.nodos = hijos
+            if self.componente_actual and self.componente_actual.texto == ")":
+                self.__siguiente()
+
+        return nodo_principal
+
+
+
+
+
+
+
+
+
+
+
+
+
     # === VERIFICACIONES ===
     def verificar(self, texto):
         if self.componente_actual is None:
@@ -265,23 +316,21 @@ class AnalizadorMacCodigo:
 
 
 if __name__ == "__main__":
-    # Cargar código fuente de ejemplo
+    from explorador.explorador import ExploradorMacCodigo
+
     with open("ejemplos/servir_hamburguesa.jama", encoding="utf-8") as f:
         fuente = f.read()
 
-    # Fase 1: Explorador léxico
-    explorador = Explorador(fuente)
-    componentes = explorador.explorar()
     print("=== COMPONENTES LÉXICOS ===")
+    explorador = ExploradorMacCodigo(fuente)
+    componentes = explorador.explorar()
     for c in componentes:
         print(c)
     explorador.imprimir_errores()
 
-    # Fase 2: Analizador sintáctico
     print("\n=== ANÁLISIS SINTÁCTICO ===")
-    analizador = Analizador(componentes)
+    analizador = AnalizadorMacCodigo(componentes)
     analizador.analizar()
 
-    # Fase 3: Mostrar el árbol
     print("\n=== ÁRBOL DE SINTAXIS ABSTRACTA ===")
-    analizador.asa.imprimir_preorden_decorado()
+    analizador.asa.imprimir()

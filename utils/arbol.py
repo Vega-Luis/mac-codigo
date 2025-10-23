@@ -30,12 +30,15 @@ class NodoArbol:
 
     def imprimir(self, nivel=0):
         sangria = "  " * nivel
+        tipo_nombre = self.tipo.name if self.tipo else "(sin tipo)"
         if self.contenido:
-            print(f"{sangria}{self.tipo.name}: {self.contenido}")
+            print(f"{sangria}{tipo_nombre}: {self.contenido}")
         else:
-            print(f"{sangria}{self.tipo.name}")
+            print(f"{sangria}{tipo_nombre}")
         for nodo in self.nodos:
-            nodo.imprimir(nivel + 1)
+            if nodo:  # evita imprimir nodos None
+                nodo.imprimir(nivel + 1)
+
 
 class ArbolSintaxisAbstracta:
     def __init__(self):
