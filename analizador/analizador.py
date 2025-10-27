@@ -4,7 +4,6 @@ from utils.tipo_datos import TipoDatos
 from explorador.explorador import ExploradorMacCodigo
 
 
-
 class AnalizadorMacCodigo:
     """
     Analizador sintáctico para el lenguaje MacCódigo.
@@ -26,7 +25,7 @@ class AnalizadorMacCodigo:
     # === GRAMÁTICA PRINCIPAL ===
     def __analizar_programa(self):
         """
-        Programa ::= (Asignacion | Condicional | Repeticion | Funcion | InstruccionSimple)* 
+        Programa ::= (Asignacion | Condicional | Repeticion | Funcion | InstruccionSimple)*
         """
         nodos = []
 
@@ -45,37 +44,59 @@ class AnalizadorMacCodigo:
             elif texto in ["servir", "cocinar", "entregar", "hambriento", "satisfecho"]:
                 nodos.append(self.analizar_instruccion_simple())
 
-            elif self.componente_actual.tipo in [TipoComponente.IDENTIFICADOR, TipoComponente.ASIGNACION]:
+                # Fin del programa
+                if texto == "satisfecho":
+                    self.__siguiente()
+                    break
+
+            elif self.componente_actual.tipo in [
+                TipoComponente.IDENTIFICADOR,
+                TipoComponente.ASIGNACION,
+                TipoComponente.TIPO,
+            ]:
                 nodos.append(self.analizar_asignacion())
 
             else:
-                # avanza si no reconoce nada, evita bucle infinito
+                # ignorar símbolos sueltos
                 self.__siguiente()
 
         return NodoArbol(TipoNodo.PROGRAMA, nodos=nodos)
 
-
     # === ASIGNACIÓN ===
     def analizar_asignacion(self):
         """
-        Asignacion ::= Identificador <- (Literal | Expresión)
+        Asignacion ::= (TIPO)? Identificador <- (Literal | Expresion | { Asignacion* })
         """
         nodos = []
+
+        # Si hay un TIPO antes del identificador (p.ej. 'torta id <- 101'), lo saltamos
+        if self.componente_actual and self.componente_actual.tipo == TipoComponente.TIPO:
+            tipo_nombre = self.componente_actual.texto
+            self.__siguiente()
+
         identificador = self.verificar_identificador()
         nodos.append(identificador)
 
         self.verificar("<-")
         self.__siguiente()
 
-        if self.componente_actual.tipo in (
+        # Si viene un bloque entre llaves
+        if self.componente_actual and self.componente_actual.texto == "{":
+            bloque = self.analizar_bloque_instrucciones()
+            nodos.append(bloque)
+
+        # Literal simple
+        elif self.componente_actual.tipo in (
             TipoComponente.ENTERO,
             TipoComponente.FLOTANTE,
             TipoComponente.STRING,
             TipoComponente.BOOLEANO,
-            TipoComponente.CARACTER
+            TipoComponente.CARACTER,
         ):
             literal = self.analizar_literal()
             nodos.append(literal)
+
+        # Expresión (identificadores, operadores, etc.)
         else:
             nodos.append(self.analizar_expresion())
 
@@ -161,13 +182,17 @@ class AnalizadorMacCodigo:
     # === BLOQUE DE INSTRUCCIONES ===
     def analizar_bloque_instrucciones(self):
         """
-        BloqueInstrucciones ::= { Instruccion* }
+        BloqueInstrucciones ::= { (Instruccion (',' Instruccion)*)? }
         """
         nodos = []
         self.verificar("{")
         self.__siguiente()
 
-        while self.componente_actual and self.componente_actual.texto not in ["}"]:
+        while self.componente_actual and self.componente_actual.texto != "}":
+            # Ignorar comas, punto y coma, o tokens vacíos
+            if self.componente_actual.texto in [",", ";"]:
+                self.__siguiente()
+                continue
             nodos.append(self.analizar_instruccion())
 
         self.verificar("}")
@@ -184,10 +209,12 @@ class AnalizadorMacCodigo:
             return self.analizar_condicional()
         elif self.componente_actual.texto == "para":
             return self.analizar_repeticion()
-        elif self.componente_actual.tipo == TipoComponente.IDENTIFICADOR:
+        elif self.componente_actual.tipo in [TipoComponente.IDENTIFICADOR, TipoComponente.TIPO]:
             return self.analizar_asignacion()
         else:
-            raise Exception(f"Instrucción no reconocida: {self.componente_actual.texto}")
+            # ignorar separadores u otros tokens sueltos
+            self.__siguiente()
+            return NodoArbol(TipoNodo.EXPRESION, contenido="")
 
     # === CONDICIONES / EXPRESIONES / LITERALES ===
     def analizar_condicion(self):
@@ -226,7 +253,7 @@ class AnalizadorMacCodigo:
             TipoComponente.FLOTANTE: TipoNodo.FLOTANTE,
             TipoComponente.STRING: TipoNodo.STRING,
             TipoComponente.BOOLEANO: TipoNodo.BOOLEANO,
-            TipoComponente.CARACTER: TipoNodo.CARACTER
+            TipoComponente.CARACTER: TipoNodo.CARACTER,
         }
         nodo = NodoArbol(mapa.get(tipo), contenido=self.componente_actual.texto)
         self.__siguiente()
@@ -245,7 +272,6 @@ class AnalizadorMacCodigo:
             self.__siguiente()
             nodos.append(self.verificar_identificador())
         return NodoArbol(TipoNodo.PARAMETROS, nodos=nodos)
-
 
     def analizar_instruccion_simple(self):
         """
@@ -275,18 +301,6 @@ class AnalizadorMacCodigo:
 
         return nodo_principal
 
-
-
-
-
-
-
-
-
-
-
-
-
     # === VERIFICACIONES ===
     def verificar(self, texto):
         if self.componente_actual is None:
@@ -301,8 +315,8 @@ class AnalizadorMacCodigo:
             raise Exception(f"Se esperaba tipo '{tipo}', pero se encontró '{self.componente_actual.tipo}'.")
 
     def verificar_identificador(self):
-        if self.componente_actual.tipo != TipoComponente.IDENTIFICADOR:
-            raise Exception(f"Se esperaba un identificador, se encontró '{self.componente_actual.texto}'.")
+        if self.componente_actual.tipo not in [TipoComponente.IDENTIFICADOR, TipoComponente.TIPO]:
+            raise Exception(f"Se esperaba un identificador o tipo, se encontró '{self.componente_actual.texto}'.")
         nodo = NodoArbol(TipoNodo.IDENTIFICADOR, contenido=self.componente_actual.texto)
         self.__siguiente()
         return nodo
