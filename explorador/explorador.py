@@ -162,28 +162,3 @@ class ExploradorMacCodigo:
             print(f"\nErrores totales: {len(self.errores)}")
         else:
             print("\nSin errores léxicos.")
-
-
-if __name__ == "__main__":
-    """
-    Punto de entrada del programa.
-
-    Uso:
-        python scanner_mac_codigo.py <archivo.mac>
-
-    Donde <archivo.mac> es un archivo de texto que contiene código
-    en el lenguaje 'MacCodigo'.
-    """
-    import sys
-    if len(sys.argv) < 2:
-        print("Uso: python scanner_mac_codigo.py <archivo.mac>")
-        sys.exit(1)
-
-    archivo = sys.argv[1]
-    with open(archivo, encoding="utf-8") as f:
-        datos = f.read()
-
-    scanner = ExploradorMacCodigo(datos)
-    scanner.explorar()
-    scanner.imprimir_componentes()
-    scanner.imprimir_errores()
