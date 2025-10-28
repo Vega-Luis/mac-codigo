@@ -17,6 +17,7 @@ class TipoNodo(Enum):
     BOOLEANO = auto()
     CARACTER = auto()
     IDENTIFICADOR = auto()
+    DECLARACION_VARIABLE = auto()
     PARAMETROS = auto()
 
 class NodoArbol:
