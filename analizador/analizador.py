@@ -327,24 +327,3 @@ class AnalizadorMacCodigo:
             self.componente_actual = self.componentes_lexicos[self.posicion]
         else:
             self.componente_actual = None
-
-
-if __name__ == "__main__":
-    from explorador.explorador import ExploradorMacCodigo
-
-    with open("ejemplos/servir_hamburguesa.jama", encoding="utf-8") as f:
-        fuente = f.read()
-
-    print("=== COMPONENTES LÉXICOS ===")
-    explorador = ExploradorMacCodigo(fuente)
-    componentes = explorador.explorar()
-    for c in componentes:
-        print(c)
-    explorador.imprimir_errores()
-
-    print("\n=== ANÁLISIS SINTÁCTICO ===")
-    analizador = AnalizadorMacCodigo(componentes)
-    analizador.analizar()
-
-    print("\n=== ÁRBOL DE SINTAXIS ABSTRACTA ===")
-    analizador.asa.imprimir()
