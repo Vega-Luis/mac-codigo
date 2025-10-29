@@ -170,6 +170,8 @@ class AnalizadorMacCodigo:
             return self.analizar_condicional()
         elif self.componente_actual.texto == "para":
             return self.analizar_repeticion()
+        elif self.componente_actual.tipo == TipoComponente.IDENTIFICADOR:
+            return self.analizar_invocacion()
         elif self.componente_actual.tipo in [
             TipoComponente.IDENTIFICADOR,
             TipoComponente.TIPO
@@ -217,7 +219,21 @@ class AnalizadorMacCodigo:
     def analizar_valor(self):
         if self.componente_actual.tipo == TipoComponente.IDENTIFICADOR:
             return self.verificar_identificador()
-        return self.analizar_literal()
+        elif self.componente_actual.tipo in (
+            TipoComponente.ENTERO,
+            TipoComponente.FLOTANTE,
+            TipoComponente.STRING,
+            TipoComponente.BOOLEANO,
+            TipoComponente.CARACTER,
+        ):
+            return self.analizar_literal()
+        else:
+            raise Exception(
+                f"Error de sintaxis: Se esperaba un identificador o un literal, "
+                f"pero se encontró '{self.componente_actual.texto}'\n"
+                f"--> línea {self.componente_actual.linea}, "
+                f"columna {self.componente_actual.columna}."
+            )
 
     def analizar_literal(self):
         tipo = self.componente_actual.tipo
@@ -433,3 +449,36 @@ class AnalizadorMacCodigo:
                 f"columna {self.componente_actual.columna}"
             )
         self.__siguiente()
+
+    def analizar_parametros_inovocacion(self):
+        """
+        Analiza los parámetros en una invocación de función.
+
+        Parámetros_de_invocación ::=
+            Valor {',' Valor }
+        """
+        parametros = []
+        parametros.append(self.analizar_valor())
+        while (
+            self.componente_actual is not None
+            and self.componente_actual.texto == ";"
+        ):
+            self.verificar_token(";")
+            parametros.append(self.analizar_valor())
+        return NodoArbol(TipoNodo.PARAMETROS, nodos=parametros)
+
+    def analizar_invocacion(self):
+        """
+        Invocación ::= Identificador "(" Parámetros_de_invocación? ")"
+        """
+        nodos = []
+        nodos.append(self.verificar_identificador())
+
+        self.verificar_token("(")
+
+        if self.componente_actual.texto != ")":
+            nodos.append(self.analizar_parametros_inovocacion())
+
+        self.verificar_token(")")
+
+        return NodoArbol(TipoNodo.INVOCACION, nodos=nodos)

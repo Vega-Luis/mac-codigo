@@ -1,0 +1,11 @@
+hambriento
+
+cocinar:
+    #  Invocar fuciones con multiples conmbinaciones de parametros #
+    sin_p(),
+    p_literal(1),
+    p_literales(1; "texto"; 'a'),
+    p_literales_variables(1; j; i; "texto"; 'a')
+.
+    
+satisfecho
