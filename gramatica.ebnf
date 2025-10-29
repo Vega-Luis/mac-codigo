@@ -1,0 +1,38 @@
+Programa ::= “hambriento” { Declaración } Sección_de_código “satisfecho”
+Declaración ::= Declaración_de_variable | Declaración_de_función
+Declaración_de_variable ::= “ingrediente” Asignación { “,” Asignación } “.”
+Asignación ::= Nombre_del_tipo Identificador “<-” ( Literal | Expresión | Invocación )
+Declaración_de_función ::= “receta” Identificador "(" Parámetros_de_declaración? ")" ( "->" Nombre_del_tipo )? Bloque_de_instrucciones
+Identificador ::= [A-Za-z_][A-Za-z0-9_]*
+Expresión ::= Término { Operador Termino }
+Término ::= Literal | Identificador | Invocación | "(" Expresión ")"
+Operador ::= "mul" | "div" | "mod" | "-" | "+"  
+Invocación ::= Identificador "(" Parámetros_de_invocación? ")"
+Parámetros_de_declaración ::= Nombre_del_tipo Identificador { ";" Nombre_del_tipo Identificador }
+Parámetros_de_invocación ::= Valor { “;” Valor }
+Valor ::= (Identificador | Literal)
+Bloque_de_instrucciones ::= ":" Instrucción { “,” Instrucción } "."
+Instrucción ::= ( Repetición 
+| Bifurcación
+                  | Asignación 
+                  | Invocación 
+                  | Retorno )
+Repetición ::= “para” Identificador “<-” Expresión “hasta” Bloque_de_instrucciones
+Bifurcación ::= “¿si?” Comparación Bloque_de_instrucciones “¡de otro modo!” Bloque_de_instrucciones
+Retorno ::= “entregar” ( Literal | Expresión )
+Sección_de_código ::= “cocinar” Bloque_de_instrucciones
+Comparación ::= Valor Comparador Valor
+Comparador ::= "=" | "!=" | "<" | ">" | "<=" | ">="
+Nombre_del_tipo ::= Nombre_del_tipo_P | Nombre_del_tipo_C
+Nombre_del_tipo_P ::= “torta” | “lechuga” | “pepinillo” | “tomate” | “salsa”
+Nombre_del_tipo_C ::= | “hamburgesa” | “cajita”
+Literal ::= Literal_primitivo | Literal_compuesto
+Literal_P ::= Lit_entero | Lit_real | Lit_caracter | Lit_cadena_de_caracteres | Lit_booleano
+Lit_entero ::= -?[0-9]+
+Lit_real ::= -?[0-9]+"."?[0-9]+
+Lit_caracter ::= ‘[^’]’
+Lit_cadena_de_caracteres ::= "\"" .* "\""
+Lit_booleano ::= “mayonesa” | “ketchup”
+Literal_C ::= Lit_registro | Lit_arreglo
+Lit_registro ::= “{“ Nombre_del_tipo_P Literal_P { “,” Nombre_del_tipo_P Literal_P} “}”
+Lit_arreglo ::= “[“ Literal_P { “,” Literal_P} “]”
