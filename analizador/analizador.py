@@ -488,19 +488,12 @@ class AnalizadorMacCodigo:
         # asignacion
         if self.componente_actual.texto == "<-":
             self.verificar_token("<-")
-            if self.componente_actual.tipo in (
-                TipoComponente.ENTERO,
-                TipoComponente.FLOTANTE,
-                TipoComponente.STRING,
-                TipoComponente.BOOLEANO,
-                TipoComponente.CARACTER,
-            ):
-                nodos.append(self.analizar_literal())
-            else:
-                nodos.append(self.analizar_expresion())
+            nodos.append(self.analizar_expresion_global())
             return NodoArbol(TipoNodo.ASIGNACION, nodos=nodos)
-        # invocaion de funcion
-        elif self.componente_actual.texto == "(":
+        return self.analizar_auxiliar_termino(nodos)
+
+    def analizar_auxiliar_termino(self, nodos):
+        if self.componente_actual.texto == "(":
             self.verificar_token("(")
             if self.componente_actual.texto != ")":
                 nodos.append(self.analizar_parametros_inovocacion())
@@ -511,3 +504,42 @@ class AnalizadorMacCodigo:
             self.verificar_token("!!")
             nodos.append(self.analizar_valor())
             return NodoArbol(TipoNodo.INDEXACION, nodos=nodos)
+        else:
+            return NodoArbol(TipoNodo.EXPRESION, nodos=nodos)
+
+    def analizar_termino(self):
+        """
+        Término ::= Identificador Auxiliar_de_termino?
+        | Literal | "(" Expresión ")" """
+        nodos = []
+        if self.componente_actual.tipo == TipoComponente.IDENTIFICADOR:
+            nodos.append(self.verificar_identificador())
+            if (
+                self.componente_actual.texto == "("
+                or self.componente_actual.texto == "!!"
+            ):
+                nodos.append(self.analizar_auxiliar_termino(nodos))
+        elif self.componente_actual.tipo in (
+            TipoComponente.ENTERO,
+            TipoComponente.FLOTANTE,
+            TipoComponente.STRING,
+            TipoComponente.BOOLEANO,
+            TipoComponente.CARACTER,
+        ):
+            nodos.append(self.analizar_literal())
+        elif self.componente_actual.texto == "(":
+            self.verificar_token("(")
+            nodos.append(self.analizar_expresion_global())
+            self.verificar_token(")")
+        return NodoArbol(TipoNodo.EXPRESION, nodos=nodos)
+
+    def analizar_expresion_global(self):
+        """
+        Expresión ::= Término { Operador Termino }
+        """
+        nodos = []
+        nodos.append(self.analizar_termino())
+        while self.componente_actual.tipo == TipoComponente.OPERADOR:
+            self.__siguiente()
+            nodos.append(self.analizar_termino())
+        return NodoArbol(TipoNodo.EXPRESION, nodos=nodos)
