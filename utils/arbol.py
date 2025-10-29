@@ -22,6 +22,7 @@ class TipoNodo(Enum):
     PARAMETROS = auto()
     SECCION_CODIGO = auto()
     INVOCACION = auto()
+    INDEXACION = auto()
 
 class NodoArbol:
     def __init__(self, tipo, contenido=None, nodos=None):

@@ -164,16 +164,15 @@ class AnalizadorMacCodigo:
     def analizar_instruccion(self):
         """
         Instruccion
-            ::= Asignacion | Condicional | Repeticion | Invocacion | Retorno
+            ::= Condicional | Repeticion | Asignacion | Invocacion | Retorno
         """
         if self.componente_actual.texto == "¿si?":
             return self.analizar_condicional()
         elif self.componente_actual.texto == "para":
             return self.analizar_repeticion()
         elif self.componente_actual.tipo == TipoComponente.IDENTIFICADOR:
-            return self.analizar_invocacion()
+            return self.analizar_instruccion_identificador()
         elif self.componente_actual.tipo in [
-            TipoComponente.IDENTIFICADOR,
             TipoComponente.TIPO
         ]:
             return self.analizar_asignacion()
@@ -482,3 +481,33 @@ class AnalizadorMacCodigo:
         self.verificar_token(")")
 
         return NodoArbol(TipoNodo.INVOCACION, nodos=nodos)
+
+    def analizar_instruccion_identificador(self):
+        nodos = []
+        nodos.append(self.verificar_identificador())
+        # asignacion
+        if self.componente_actual.texto == "<-":
+            self.verificar_token("<-")
+            if self.componente_actual.tipo in (
+                TipoComponente.ENTERO,
+                TipoComponente.FLOTANTE,
+                TipoComponente.STRING,
+                TipoComponente.BOOLEANO,
+                TipoComponente.CARACTER,
+            ):
+                nodos.append(self.analizar_literal())
+            else:
+                nodos.append(self.analizar_expresion())
+            return NodoArbol(TipoNodo.ASIGNACION, nodos=nodos)
+        # invocaion de funcion
+        elif self.componente_actual.texto == "(":
+            self.verificar_token("(")
+            if self.componente_actual.texto != ")":
+                nodos.append(self.analizar_parametros_inovocacion())
+            self.verificar_token(")")
+            return NodoArbol(TipoNodo.INVOCACION, nodos=nodos)
+        # indexacion
+        elif self.componente_actual.texto == "!!":
+            self.verificar_token("!!")
+            nodos.append(self.analizar_valor())
+            return NodoArbol(TipoNodo.INDEXACION, nodos=nodos)
