@@ -5,18 +5,20 @@ Asignación ::= Nombre_del_tipo Identificador “<-” ( Literal | Expresión | 
 Declaración_de_función ::= “receta” Identificador "(" Parámetros_de_declaración? ")" ( "->" Nombre_del_tipo )? Bloque_de_instrucciones
 Identificador ::= [A-Za-z_][A-Za-z0-9_]*
 Expresión ::= Término { Operador Termino }
-Término ::= Literal | Identificador | Invocación | "(" Expresión ")"
+Término ::= Identificador Auxiliar_de_termino? | Literal | "(" Expresión ")"
 Operador ::= "mul" | "div" | "mod" | "-" | "+"  
-Invocación ::= Identificador "(" Parámetros_de_invocación? ")"
+Auxiliar_de_termino ::= "(" Parámetros_de_invocación? ")" | "!!" valor
 Parámetros_de_declaración ::= Nombre_del_tipo Identificador { ";" Nombre_del_tipo Identificador }
 Parámetros_de_invocación ::= Valor { “;” Valor }
 Valor ::= (Identificador | Literal)
 Bloque_de_instrucciones ::= ":" Instrucción { “,” Instrucción } "."
-Instrucción ::= ( Repetición 
-| Bifurcación
-                  | Asignación 
-                  | Invocación 
-                  | Retorno )
+Instrucción ::= (
+    Repetición |
+    Bifurcación |
+    Retorno |
+    Identificador Auxiliar_de_instruccion
+    )
+Auxiliar_de_instruccion ::= ( "<-"  Expresión) | Auxiliar_de_termino
 Repetición ::= “para” Identificador “<-” Expresión “hasta” Bloque_de_instrucciones
 Bifurcación ::= “¿si?” Comparación Bloque_de_instrucciones “¡de otro modo!” Bloque_de_instrucciones
 Retorno ::= “entregar” ( Literal | Expresión )
