@@ -1,15 +1,21 @@
 hambriento #Inicio del programa #
+
+# Declaración de una función #
 receta calcular_factorial(
     torta n
-) -> torta:
+):
     ¿si? n <= 1:
         entregar(1)
+    .
     ¡de otro modo!:
-        entregar(n mul calcular_factorial(n - 1))..
+        entregar(n mul calcular_factorial(n - 1))
+    .
+.
 
+# Sección de código #
 cocinar:
     torta numero <- 5,
     torta resultado <- calcular_factorial(numero),
-    
-    servir("El factorial de "; numero; " es: "; resultado)..
+    servir("El factorial de "; numero; " es: "; resultado)
+.
 satisfecho #Fin del programa #
