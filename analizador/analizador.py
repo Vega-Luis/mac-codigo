@@ -59,7 +59,9 @@ class AnalizadorMacCodigo:
         self.verificar_token("hambriento")
 
         # { Declaración }
-        nodos.append(self.analizar_declaracion())
+        nodos_declaracion = self.analizar_declaracion()
+        if nodos_declaracion is not None:
+            nodos.append(nodos_declaracion)
 
         nodos.append(self.verificar_seccion_codigo())
 
@@ -137,10 +139,14 @@ class AnalizadorMacCodigo:
         nodos.append(self.verificar_bloque_instrucciones())
         return NodoArbol(TipoNodo.REPETICION, nodos=nodos)
 
-    # === FUNCIÓN ===
-    def analizar_funcion(self):
+    def analizar_declaracion_funcion(self):
         """
-        Funcion ::= receta Identificador (Parametros) { Instruccion* }
+        Analiza la delcaración de una función.
+
+        Declaración_de_función ::= “receta”
+                    Identificador "(" Parámetros_de_declaración? ")"
+                    ( "->" Nombre_del_tipo )?
+                    Bloque_de_instrucciones
         """
         nodos = []
         self.verificar_token("receta")
@@ -150,15 +156,14 @@ class AnalizadorMacCodigo:
 
         self.verificar_token("(")
 
-        parametros = self.analizar_parametros_definicion()
+        parametros = self.analizar_parametros_declaracion()
         nodos.append(parametros)
 
         self.verificar_token(")")
-
         bloque = self.verificar_bloque_instrucciones()
         nodos.append(bloque)
 
-        return NodoArbol(TipoNodo.FUNCION, nodos=nodos)
+        return NodoArbol(TipoNodo.DECLARACION_FUNCION, nodos=nodos)
 
     # === INSTRUCCIONES ===
     def analizar_instruccion(self):
@@ -269,18 +274,26 @@ class AnalizadorMacCodigo:
         return nodo
 
     # === PARÁMETROS ===
-    def analizar_parametros_definicion(self):
+    def analizar_parametros_declaracion(self):
         """
-        ParametrosDefinicion ::= Identificador (',' Identificador)*
+        Parámetros_de_declaración ::=
+            Nombre_del_tipo Identificador
+            { ";" Nombre_del_tipo Identificador }
         """
-        nodos = []
-        if self.componente_actual.texto == ")":
-            return NodoArbol(TipoNodo.PARAMETROS, nodos=nodos)
-        nodos.append(self.verificar_identificador())
-        while self.componente_actual.texto == ",":
+        parametros = []
+        self.verificar_tipo(TipoComponente.TIPO)
+        self.__siguiente()
+        parametros.append(self.verificar_identificador())
+
+        while (
+            self.componente_actual is not None
+            and self.componente_actual.texto == ";"
+        ):
+            self.verificar_token(";")
+            self.verificar_tipo(TipoComponente.TIPO)
             self.__siguiente()
-            nodos.append(self.verificar_identificador())
-        return NodoArbol(TipoNodo.PARAMETROS, nodos=nodos)
+            parametros.append(self.verificar_identificador())
+        return NodoArbol(TipoNodo.PARAMETROS, nodos=parametros)
 
     def analizar_instruccion_simple(self):
         """
@@ -349,7 +362,7 @@ class AnalizadorMacCodigo:
     def analizar_declaracion_variable(self):
         """
         Analiza una declaración de variable.
-
+  
         Declaración_de_variable ::=
             “ingrediente” Asignación { “,” Asignación } “.”
         """
@@ -416,8 +429,10 @@ class AnalizadorMacCodigo:
             if self.componente_actual.texto == "ingrediente":
                 nodos.append(self.analizar_declaracion_variable())
             elif self.componente_actual.texto == "receta":
-                nodos.append(self.analizar_funcion())
-        return NodoArbol(TipoNodo.DECLARACION, nodos=nodos)
+                nodos.append(self.analizar_declaracion_funcion())
+        if nodos:
+            return NodoArbol(TipoNodo.DECLARACION, nodos=nodos)
+        return None
 
     def verificar_bloque_instrucciones(self):
         """
@@ -561,3 +576,15 @@ class AnalizadorMacCodigo:
             self.__siguiente()
             nodos.append(self.analizar_termino())
         return NodoArbol(TipoNodo.EXPRESION, nodos=nodos)
+
+    def verificar_parametro_declaracion(self):
+        """
+        Verifica un parámetro de declaración de función.
+
+        Parámetro_de_declaración ::=
+            Nombre_del_tipo Identificador
+        """
+        nodos = []
+        nodos.append(self.verificar_tipo(TipoComponente.TIPO))
+        nodos.append(self.verificar_identificador())
+        return NodoArbol(TipoNodo.PARAMETROS, nodos=nodos)
