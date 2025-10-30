@@ -6,5 +6,5 @@ cocinar:
     
     servir("Precio sin IVA: "; precio),
     servir("IVA: "; iva),
-    servir("Total a pagar: "; total)..
+    servir("Total a pagar: "; total).
 satisfecho #Fin del programa #
