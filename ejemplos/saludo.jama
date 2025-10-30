@@ -3,5 +3,5 @@ cocinar:
     tomate saludo <- "Hola",
     tomate nombre <- "Mac Código",
     tomate mensaje <- saludo + " " + nombre,
-    servir("Mensaje final: "; mensaje)..
+    servir("Mensaje final: "; mensaje).
 satisfecho #Fin del programa #

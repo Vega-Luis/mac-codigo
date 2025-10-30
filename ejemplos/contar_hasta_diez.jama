@@ -1,11 +1,5 @@
-hambriento
-
-ingrediente torta contador <- 0.
-
-para (contador < 10) {
-    torta contador <- contador + 1;
-    servir("Contador: ");
-    servir(contador)
-}
-
-satisfecho
+hambriento #Inicio del programa #
+cocinar:
+    para contador <- 0 hasta 10:
+        servir("Contando: "; contador)..
+satisfecho #Fin del programa #

@@ -38,6 +38,7 @@ class AnalizadorMacCodigo:
             else None
         )
         self.asa = ArbolSintaxisAbstracta()
+        self.errores = []
 
     def analizar(self):
         """
@@ -54,41 +55,19 @@ class AnalizadorMacCodigo:
         """
         nodos = []
 
-        while self.componente_actual is not None:
-            texto = self.componente_actual.texto
+        # Verificar inicio del programa
+        self.verificar_token("hambriento")
 
-            if texto == "receta":
-                nodos.append(self.analizar_funcion())
+        # { Declaración }
+        nodos_declaracion = self.analizar_declaracion()
+        if nodos_declaracion is not None:
+            nodos.append(nodos_declaracion)
 
-            elif texto in ["¿si?", "¡de otro modo!"]:
-                nodos.append(self.analizar_condicional())
+        nodos.append(self.verificar_seccion_codigo())
 
-            elif texto in ["para", "hasta"]:
-                nodos.append(self.analizar_repeticion())
-
-            elif texto in (
-                ["servir", "cocinar", "entregar",
-                 "hambriento", "satisfecho"]
-            ):
-                nodos.append(self.analizar_instruccion_simple())
-
-                # Fin del programa
-                if texto == "satisfecho":
-                    self.__siguiente()
-                    break
-
-            elif self.componente_actual.tipo in [
-                TipoComponente.IDENTIFICADOR,
-                TipoComponente.ASIGNACION,
-                TipoComponente.TIPO,
-            ]:
-                nodos.append(self.analizar_asignacion())
-            elif texto == "ingrediente":
-                nodos.append(self.analizar_declaracion_variable())
-
-            else:
-                # ignorar símbolos sueltos
-                self.__siguiente()
+        # Verificar fin del programa
+        self.verificar_token("satisfecho")
+        self.verificar_fin_archivo()  # Verificar que no haya más tokens
 
         return NodoArbol(TipoNodo.PROGRAMA, nodos=nodos)
 
@@ -96,168 +75,110 @@ class AnalizadorMacCodigo:
     def analizar_asignacion(self):
         """
         Asignacion ::=
-        (TIPO)? Identificador <- (Literal | Expresion | { Asignacion* })
+        Nombre_del_tipo Identificador <- (Literal | Expresion | Invocación)
         """
         nodos = []
-
-        # Si hay un TIPO antes del identificador
-        # (p.ej. 'torta id <- 101'), lo saltamos
-        if (
-            self.componente_actual
-            and self.componente_actual.tipo == TipoComponente.TIPO
-        ):
-            tipo_nombre = self.componente_actual.texto
-            self.__siguiente()
+        # Verificar nombre del tipo
+        self.verificar_tipo(TipoComponente.TIPO)
+        self.__siguiente()
 
         identificador = self.verificar_identificador()
         nodos.append(identificador)
+        self.verificar_token("<-")
+        nodos.append(self.analizar_expresion_global())
+        return NodoArbol(TipoNodo.DECLARACION_VARIABLE, nodos=nodos)
 
-        self.verificar("<-")
-        self.__siguiente()
-
-        # Si viene un bloque entre llaves
-        if self.componente_actual and self.componente_actual.texto == "{":
-            bloque = self.analizar_bloque_instrucciones()
-            nodos.append(bloque)
-
-        # Literal simple
-        elif self.componente_actual.tipo in (
-            TipoComponente.ENTERO,
-            TipoComponente.FLOTANTE,
-            TipoComponente.STRING,
-            TipoComponente.BOOLEANO,
-            TipoComponente.CARACTER,
-        ):
-            literal = self.analizar_literal()
-            nodos.append(literal)
-
-        # Expresión (identificadores, operadores, etc.)
-        else:
-            nodos.append(self.analizar_expresion())
-
-        return NodoArbol(TipoNodo.ASIGNACION, nodos=nodos)
-
-    # === CONDICIONAL ===
     def analizar_condicional(self):
         """
         Condicional ::=
-            ¿si? (Condicion) { Instruccion* }
-            (¡de otro modo! { Instruccion* })?
+            “¿si?” Comparación Bloque_de_instrucciones “¡de otro modo!”
         """
         nodos = []
-        self.verificar("¿si?")
-        self.__siguiente()
-
-        self.verificar("(")
-        self.__siguiente()
-
-        condicion = self.analizar_condicion()
-        nodos.append(condicion)
-
-        self.verificar(")")
-        self.__siguiente()
-
-        bloque_si = self.analizar_bloque_instrucciones()
-        nodos.append(bloque_si)
-
-        if (
-            self.componente_actual
-            and self.componente_actual.texto == "¡de otro modo!"
-        ):
-            self.__siguiente()
-            bloque_else = self.analizar_bloque_instrucciones()
-            nodos.append(bloque_else)
-
+        self.verificar_token("¿si?")
+        nodos.append(self.analizar_condicion())
+        nodos.append(self.verificar_bloque_instrucciones())
+        self.verificar_token("¡de otro modo!")
+        nodos.append(self.verificar_bloque_instrucciones())
         return NodoArbol(TipoNodo.CONDICIONAL, nodos=nodos)
 
     # === REPETICIÓN ===
     def analizar_repeticion(self):
         """
-        Repeticion ::= para (Condicion) { Instruccion* }
+        Repeticion ::=  “para” Identificador “<-” Expresión “hasta”
+            Bloque_de_instrucciones
         """
         nodos = []
-        self.verificar("para")
-        self.__siguiente()
-
-        self.verificar("(")
-        self.__siguiente()
-
-        condicion = self.analizar_condicion()
-        nodos.append(condicion)
-
-        self.verificar(")")
-        self.__siguiente()
-
-        bloque = self.analizar_bloque_instrucciones()
-        nodos.append(bloque)
-
+        self.verificar_token("para")
+        nodos.append(self.verificar_identificador())
+        self.verificar_token("<-")
+        nodos.append(self.analizar_literal())
+        self.verificar_token("hasta")
+        nodos.append(self.analizar_literal())
+        nodos.append(self.verificar_bloque_instrucciones())
         return NodoArbol(TipoNodo.REPETICION, nodos=nodos)
 
-    # === FUNCIÓN ===
-    def analizar_funcion(self):
+    def analizar_declaracion_funcion(self):
         """
-        Funcion ::= receta Identificador (Parametros) { Instruccion* }
+        Analiza la delcaración de una función.
+
+        Declaración_de_función ::= “receta”
+                    Identificador "(" Parámetros_de_declaración? ")"
+                    ( "->" Nombre_del_tipo )?
+                    Bloque_de_instrucciones
         """
         nodos = []
-        self.verificar("receta")
-        self.__siguiente()
+        self.verificar_token("receta")
 
         identificador = self.verificar_identificador()
         nodos.append(identificador)
 
-        self.verificar("(")
-        self.__siguiente()
+        self.verificar_token("(")
 
-        parametros = self.analizar_parametros_definicion()
+        parametros = self.analizar_parametros_declaracion()
         nodos.append(parametros)
 
-        self.verificar(")")
-        self.__siguiente()
-
-        bloque = self.analizar_bloque_instrucciones()
+        self.verificar_token(")")
+        bloque = self.verificar_bloque_instrucciones()
         nodos.append(bloque)
 
-        return NodoArbol(TipoNodo.FUNCION, nodos=nodos)
-
-    # === BLOQUE DE INSTRUCCIONES ===
-    def analizar_bloque_instrucciones(self):
-        """
-        BloqueInstrucciones ::= { (Instruccion (',' Instruccion)*)? }
-        """
-        nodos = []
-        self.verificar("{")
-        self.__siguiente()
-
-        while self.componente_actual and self.componente_actual.texto != "}":
-            # Ignorar comas, punto y coma, o tokens vacíos
-            if self.componente_actual.texto in [",", ";"]:
-                self.__siguiente()
-                continue
-            nodos.append(self.analizar_instruccion())
-
-        self.verificar("}")
-        self.__siguiente()
-
-        return NodoArbol(TipoNodo.BLOQUE_INSTRUCCIONES, nodos=nodos)
+        return NodoArbol(TipoNodo.DECLARACION_FUNCION, nodos=nodos)
 
     # === INSTRUCCIONES ===
     def analizar_instruccion(self):
         """
-        Instruccion ::= Asignacion | Condicional | Repeticion
+        Instruccion
+            ::= Condicional | Repeticion | Asignacion | Invocacion | Retorno
         """
         if self.componente_actual.texto == "¿si?":
             return self.analizar_condicional()
         elif self.componente_actual.texto == "para":
             return self.analizar_repeticion()
-        elif self.componente_actual.tipo in [
-            TipoComponente.IDENTIFICADOR,
-            TipoComponente.TIPO
-        ]:
+        elif self.componente_actual.tipo == TipoComponente.IDENTIFICADOR:
+            return self.analizar_instruccion_identificador()
+        elif self.componente_actual.tipo == TipoComponente.TIPO:
             return self.analizar_asignacion()
+        elif self.componente_actual.texto == "entregar":
+            self.verificar_token("entregar")
+            nodo = NodoArbol(
+                TipoNodo.RETORNO,
+                nodos=[self.analizar_expresion_global()]
+            )
+            return nodo
+        elif self.componente_actual.texto == "servir":
+            self.verificar_token("servir")
+            self.verificar_token("(")
+            nodo = NodoArbol(
+                TipoNodo.SIS,
+                nodos=[self.analizar_parametros_inovocacion()])
+            self.verificar_token(")")
+            return nodo
         else:
-            # ignorar separadores u otros tokens sueltos
-            self.__siguiente()
-            return NodoArbol(TipoNodo.EXPRESION, contenido="")
+            raise Exception(
+                f"Error de sintaxis: Instrucción no reconocida "
+                f"'{self.componente_actual.texto}'\n"
+                f"--> línea {self.componente_actual.linea}, "
+                f"columna {self.componente_actual.columna}."
+            )
 
     # === CONDICIONES / EXPRESIONES / LITERALES ===
     def analizar_condicion(self):
@@ -296,7 +217,21 @@ class AnalizadorMacCodigo:
     def analizar_valor(self):
         if self.componente_actual.tipo == TipoComponente.IDENTIFICADOR:
             return self.verificar_identificador()
-        return self.analizar_literal()
+        elif self.componente_actual.tipo in (
+            TipoComponente.ENTERO,
+            TipoComponente.FLOTANTE,
+            TipoComponente.STRING,
+            TipoComponente.BOOLEANO,
+            TipoComponente.CARACTER,
+        ):
+            return self.analizar_literal()
+        else:
+            raise Exception(
+                f"Error de sintaxis: Se esperaba un identificador o un literal, "
+                f"pero se encontró '{self.componente_actual.texto}'\n"
+                f"--> línea {self.componente_actual.linea}, "
+                f"columna {self.componente_actual.columna}."
+            )
 
     def analizar_literal(self):
         tipo = self.componente_actual.tipo
@@ -315,18 +250,26 @@ class AnalizadorMacCodigo:
         return nodo
 
     # === PARÁMETROS ===
-    def analizar_parametros_definicion(self):
+    def analizar_parametros_declaracion(self):
         """
-        ParametrosDefinicion ::= Identificador (',' Identificador)*
+        Parámetros_de_declaración ::=
+            Nombre_del_tipo Identificador
+            { ";" Nombre_del_tipo Identificador }
         """
-        nodos = []
-        if self.componente_actual.texto == ")":
-            return NodoArbol(TipoNodo.PARAMETROS, nodos=nodos)
-        nodos.append(self.verificar_identificador())
-        while self.componente_actual.texto == ",":
+        parametros = []
+        self.verificar_tipo(TipoComponente.TIPO)
+        self.__siguiente()
+        parametros.append(self.verificar_identificador())
+
+        while (
+            self.componente_actual is not None
+            and self.componente_actual.texto == ";"
+        ):
+            self.verificar_token(";")
+            self.verificar_tipo(TipoComponente.TIPO)
             self.__siguiente()
-            nodos.append(self.verificar_identificador())
-        return NodoArbol(TipoNodo.PARAMETROS, nodos=nodos)
+            parametros.append(self.verificar_identificador())
+        return NodoArbol(TipoNodo.PARAMETROS, nodos=parametros)
 
     def analizar_instruccion_simple(self):
         """
@@ -359,23 +302,8 @@ class AnalizadorMacCodigo:
 
         return nodo_principal
 
-    # === VERIFICACIONES ===
-    def verificar(self, texto):
-        self.verificar_token_existe(texto)
-
-        if self.componente_actual.texto != texto:
-            print(self.componente_actual)
-            raise Exception(
-                f"Error de sintaxis: Se esperaba '{texto}', "
-                f"pero se encontró '{self.componente_actual.texto}'\n"
-                f"--> línea {self.componente_actual.linea}, "
-                f"columna {self.componente_actual.columna}"
-            )
-
     def verificar_tipo(self, tipo):
-        self.verificar_token_existe(tipo)
-
-        if self.componente_actual.tipo != tipo:
+        if self.componente_actual and self.componente_actual.tipo != tipo:
             raise Exception(
                 f"Error de sintaxis: Se esperaba tipo '{tipo}', "
                 f"pero se encontró '{self.componente_actual.tipo}'\n"
@@ -393,7 +321,10 @@ class AnalizadorMacCodigo:
                 f"se encontró '{self.componente_actual.texto}'\n"
                 f"--> línea {self.componente_actual.linea}, "
                 f"columna {self.componente_actual.columna}")
-        nodo = NodoArbol(TipoNodo.IDENTIFICADOR, contenido=self.componente_actual.texto)
+        nodo = NodoArbol(
+            TipoNodo.IDENTIFICADOR,
+            contenido=self.componente_actual.texto
+        )
         self.__siguiente()
         return nodo
 
@@ -427,17 +358,84 @@ class AnalizadorMacCodigo:
             nodos.append(asignacion)
             if self.componente_actual and self.componente_actual.texto == ",":
                 self.__siguiente()  # Saltar la coma
-        self.verificar(".")
-        self.__siguiente()  # Saltar el punto final
+        self.verificar_token(".")
         return NodoArbol(TipoNodo.DECLARACION_VARIABLE, nodos=nodos)
 
-    def verificar_token_existe(self, token_esperado):
+    def verificar_fin_archivo(self):
         """
-        Verifica que el componente lexico actual no sea None.
-        Si es None, entonces, se hay llegado al final del archivo,
-        se lanza una excepción indicando que se esperaba.
+        Verifica que se haya llegado al final del archivo después de 'satisfecho'.
+        Si no es así, lanza una excepción indicando el error.
+        """
+        if self.componente_actual is not None:
+            raise Exception(
+                f"Error de sintaxis: "
+                f"se esperaba el fin del archivo después de 'satisfecho', "
+                f"pero se encontró "
+                f"'{self.componente_actual.texto}'\n"
+                f"--> línea {self.componente_actual.linea}, "
+                f"columna {self.componente_actual.columna}"
+            )
 
-        Parametros
+    def verificar_seccion_codigo(self):
+        """
+        Verifica que la sección de código
+        esté presente después de las declaraciones.
+        Si no es así, lanza una excepción indicando el error.
+        """
+        nodos = []
+        self.verificar_token("cocinar")
+        nodos.append(self.verificar_bloque_instrucciones())
+        return NodoArbol(
+            TipoNodo.SECCION_CODIGO,
+            contenido="cocinar", nodos=nodos
+        )
+
+    def analizar_declaracion(self):
+        """
+        Analiza una declaración antes de la sección de código.
+
+        Declaración ::=
+            Declaración_de_variable | Declaración_de_función
+        """
+        nodos = []
+        while (
+            self.componente_actual is not None
+            and self.componente_actual.texto in ["ingrediente", "receta"]
+        ):
+            if self.componente_actual.texto == "ingrediente":
+                nodos.append(self.analizar_declaracion_variable())
+            elif self.componente_actual.texto == "receta":
+                nodos.append(self.analizar_declaracion_funcion())
+        if nodos:
+            return NodoArbol(TipoNodo.DECLARACION, nodos=nodos)
+        return None
+
+    def verificar_bloque_instrucciones(self):
+        """
+        Verifica que haya un bloque de instrucciones.
+        Si no es así, lanza una excepción indicando el error.
+        """
+        instrucciones = []
+        self.verificar_token(":")
+        instrucciones.append(self.analizar_instruccion())
+
+        while (
+            self.componente_actual is not None
+            and self.componente_actual.texto == ","
+        ):
+            self.verificar_token(",")
+            instrucciones.append(self.analizar_instruccion())
+        self.verificar_token(".")
+        return NodoArbol(TipoNodo.BLOQUE_INSTRUCCIONES, nodos=instrucciones)
+
+    def verificar_token(self, token_esperado):
+        """
+        Verifica que el componente léxico actual exista
+        y coincida con el token esperado.
+        Si no coincide, lanza una excepción indicando el error.
+        Si no hay error, consume un token.
+
+        Parámetros
         ----------
         token_esperado : str
             El token que se esperaba encontrar.
@@ -450,3 +448,119 @@ class AnalizadorMacCodigo:
                 f"--> línea {self.componentes_lexicos[-1].linea}, "
                 f"columna {self.componentes_lexicos[-1].columna}"
             )
+        elif self.componente_actual.texto != token_esperado:
+            raise Exception(
+                f"Error de sintaxis: Token inesperado: "
+                f"Se esperaba '{token_esperado}', "
+                f"pero se encontró '{self.componente_actual.texto}'\n"
+                f"--> línea {self.componente_actual.linea}, "
+                f"columna {self.componente_actual.columna}"
+            )
+        self.__siguiente()
+
+    def analizar_parametros_inovocacion(self):
+        """
+        Analiza los parámetros en una invocación de función.
+
+        Parámetros_de_invocación ::=
+            Valor {',' Valor }
+        """
+        parametros = []
+        parametros.append(self.analizar_expresion_global())
+        while (
+            self.componente_actual is not None
+            and self.componente_actual.texto == ";"
+        ):
+            self.verificar_token(";")
+            parametros.append(self.analizar_expresion_global())
+        return NodoArbol(TipoNodo.PARAMETROS, nodos=parametros)
+
+    def analizar_invocacion(self):
+        """
+        Invocación ::= Identificador "(" Parámetros_de_invocación? ")"
+        """
+        nodos = []
+        nodos.append(self.verificar_identificador())
+
+        self.verificar_token("(")
+
+        if self.componente_actual.texto != ")":
+            nodos.append(self.analizar_parametros_inovocacion())
+
+        self.verificar_token(")")
+
+        return NodoArbol(TipoNodo.INVOCACION, nodos=nodos)
+
+    def analizar_instruccion_identificador(self):
+        nodos = []
+        nodos.append(self.verificar_identificador())
+        # asignacion
+        if self.componente_actual.texto == "<-":
+            self.verificar_token("<-")
+            nodos.append(self.analizar_expresion_global())
+            return NodoArbol(TipoNodo.ASIGNACION, nodos=nodos)
+        return self.analizar_auxiliar_termino(nodos)
+
+    def analizar_auxiliar_termino(self, nodos):
+        if self.componente_actual.texto == "(":
+            self.verificar_token("(")
+            if self.componente_actual.texto != ")":
+                nodos.append(self.analizar_parametros_inovocacion())
+            self.verificar_token(")")
+            return NodoArbol(TipoNodo.INVOCACION, nodos=nodos)
+        # indexacion
+        elif self.componente_actual.texto == "!!":
+            self.verificar_token("!!")
+            nodos.append(self.analizar_valor())
+            return NodoArbol(TipoNodo.INDEXACION, nodos=nodos)
+        else:
+            return NodoArbol(TipoNodo.EXPRESION, nodos=nodos)
+
+    def analizar_termino(self):
+        """
+        Término ::= Identificador Auxiliar_de_termino?
+        | Literal | "(" Expresión ")" """
+        nodos = []
+        if self.componente_actual.tipo == TipoComponente.IDENTIFICADOR:
+            nodos.append(self.verificar_identificador())
+            if (
+                self.componente_actual.texto == "("
+                or self.componente_actual.texto == "!!"
+            ):
+                return self.analizar_auxiliar_termino(nodos)
+        elif self.componente_actual.tipo in (
+            TipoComponente.ENTERO,
+            TipoComponente.FLOTANTE,
+            TipoComponente.STRING,
+            TipoComponente.BOOLEANO,
+            TipoComponente.CARACTER,
+        ):
+            return self.analizar_literal()
+        elif self.componente_actual.texto == "(":
+            self.verificar_token("(")
+            nodos.append(self.analizar_expresion_global())
+            self.verificar_token(")")
+            return NodoArbol(TipoNodo.TERMINO, nodos=nodos)
+
+    def analizar_expresion_global(self):
+        """
+        Expresión ::= Término { Operador Termino }
+        """
+        nodos = []
+        nodos.append(self.analizar_termino())
+        while self.componente_actual.tipo == TipoComponente.OPERADOR:
+            self.__siguiente()
+            nodos.append(self.analizar_termino())
+        return NodoArbol(TipoNodo.EXPRESION, nodos=nodos)
+
+    def verificar_parametro_declaracion(self):
+        """
+        Verifica un parámetro de declaración de función.
+
+        Parámetro_de_declaración ::=
+            Nombre_del_tipo Identificador
+        """
+        nodos = []
+        nodos.append(self.verificar_tipo(TipoComponente.TIPO))
+        nodos.append(self.verificar_identificador())
+        return NodoArbol(TipoNodo.PARAMETROS, nodos=nodos)

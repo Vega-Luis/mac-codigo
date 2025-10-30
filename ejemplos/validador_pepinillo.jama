@@ -5,26 +5,32 @@ cocinar:
     torta vocales <- 0,
     torta consonantes <- 0,
     pepinillo letra <- 'a',
-    torta i <- 0,
     
     servir("Analizando la palabra: "; palabra),
     
-    para i hasta longitud:
+    para i <-0 hasta longitud:
         letra <- palabra!!i,
         ¿si? letra = 'a':
             vocales <- vocales + 1
+        .
         ¡de otro modo!:
             ¿si? letra = 'e':
                 vocales <- vocales + 1
+            .
             ¡de otro modo!:
                 ¿si? letra = 'i':
                     vocales <- vocales + 1
+                .
                 ¡de otro modo!:
                     ¿si? letra = 'o':
                         vocales <- vocales + 1
+                    .
                     ¡de otro modo!:
-                        consonantes <- consonantes + 1.......
-    
+                        consonantes <- consonantes + 1
+                    .
+                .
+            .
+        .,
     servir("Total de vocales: "; vocales),
     servir("Total de consonantes: "; consonantes)..
 satisfecho #Fin del programa #
