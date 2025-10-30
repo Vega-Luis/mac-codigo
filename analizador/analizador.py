@@ -78,37 +78,15 @@ class AnalizadorMacCodigo:
         Nombre_del_tipo Identificador <- (Literal | Expresion | Invocación)
         """
         nodos = []
-
-        # Si hay un TIPO antes del identificador
-        # (p.ej. 'torta id <- 101'), lo saltamos
-        if (
-            self.componente_actual is not None
-            and self.componente_actual.tipo == TipoComponente.TIPO
-        ):
-            self.__siguiente()
+        # Verificar nombre del tipo
+        self.verificar_tipo(TipoComponente.TIPO)
+        self.__siguiente()
 
         identificador = self.verificar_identificador()
         nodos.append(identificador)
-
         self.verificar_token("<-")
-
-        # Literal simple
-        if self.componente_actual.tipo in (
-            TipoComponente.ENTERO,
-            TipoComponente.FLOTANTE,
-            TipoComponente.STRING,
-            TipoComponente.BOOLEANO,
-            TipoComponente.CARACTER,
-        ):
-            literal = self.analizar_literal()
-            nodos.append(literal)
-
-
-        # Expresión (identificadores, operadores, etc.)
-        else:
-            nodos.append(self.analizar_expresion())
-
-        return NodoArbol(TipoNodo.ASIGNACION, nodos=nodos)
+        nodos.append(self.analizar_expresion_global())
+        return NodoArbol(TipoNodo.DECLARACION_VARIABLE, nodos=nodos)
 
     def analizar_condicional(self):
         """
@@ -177,9 +155,7 @@ class AnalizadorMacCodigo:
             return self.analizar_repeticion()
         elif self.componente_actual.tipo == TipoComponente.IDENTIFICADOR:
             return self.analizar_instruccion_identificador()
-        elif self.componente_actual.tipo in [
-            TipoComponente.TIPO
-        ]:
+        elif self.componente_actual.tipo == TipoComponente.TIPO:
             return self.analizar_asignacion()
         elif self.componente_actual.texto == "entregar":
             self.verificar_token("entregar")
@@ -362,7 +338,7 @@ class AnalizadorMacCodigo:
     def analizar_declaracion_variable(self):
         """
         Analiza una declaración de variable.
-  
+
         Declaración_de_variable ::=
             “ingrediente” Asignación { “,” Asignación } “.”
         """
