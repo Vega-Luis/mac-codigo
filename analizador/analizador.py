@@ -177,9 +177,12 @@ class AnalizadorMacCodigo:
         ]:
             return self.analizar_asignacion()
         else:
-            # ignorar separadores u otros tokens sueltos
-            # self.__siguiente()
-            return NodoArbol(TipoNodo.EXPRESION, contenido="")
+            raise Exception(
+                f"Error de sintaxis: Instrucción no reconocida "
+                f"'{self.componente_actual.texto}'\n"
+                f"--> línea {self.componente_actual.linea}, "
+                f"columna {self.componente_actual.columna}."
+            )
 
     # === CONDICIONES / EXPRESIONES / LITERALES ===
     def analizar_condicion(self):
@@ -457,13 +460,13 @@ class AnalizadorMacCodigo:
             Valor {',' Valor }
         """
         parametros = []
-        parametros.append(self.analizar_valor())
+        parametros.append(self.analizar_expresion_global())
         while (
             self.componente_actual is not None
             and self.componente_actual.texto == ";"
         ):
             self.verificar_token(";")
-            parametros.append(self.analizar_valor())
+            parametros.append(self.analizar_expresion_global())
         return NodoArbol(TipoNodo.PARAMETROS, nodos=parametros)
 
     def analizar_invocacion(self):
@@ -518,7 +521,7 @@ class AnalizadorMacCodigo:
                 self.componente_actual.texto == "("
                 or self.componente_actual.texto == "!!"
             ):
-                nodos.append(self.analizar_auxiliar_termino(nodos))
+                return self.analizar_auxiliar_termino(nodos)
         elif self.componente_actual.tipo in (
             TipoComponente.ENTERO,
             TipoComponente.FLOTANTE,
@@ -526,12 +529,12 @@ class AnalizadorMacCodigo:
             TipoComponente.BOOLEANO,
             TipoComponente.CARACTER,
         ):
-            nodos.append(self.analizar_literal())
+            return self.analizar_literal()
         elif self.componente_actual.texto == "(":
             self.verificar_token("(")
             nodos.append(self.analizar_expresion_global())
             self.verificar_token(")")
-        return NodoArbol(TipoNodo.EXPRESION, nodos=nodos)
+            return NodoArbol(TipoNodo.TERMINO, nodos=nodos)
 
     def analizar_expresion_global(self):
         """
