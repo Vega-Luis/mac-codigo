@@ -24,6 +24,8 @@ class TipoNodo(Enum):
     INVOCACION = auto()
     INDEXACION = auto()
     TERMINO = auto()
+    RETORNO = auto()
+    SIS = auto()
 
 class NodoArbol:
     def __init__(self, tipo, contenido=None, nodos=None):

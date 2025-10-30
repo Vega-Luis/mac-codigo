@@ -176,6 +176,21 @@ class AnalizadorMacCodigo:
             TipoComponente.TIPO
         ]:
             return self.analizar_asignacion()
+        elif self.componente_actual.texto == "entregar":
+            self.verificar_token("entregar")
+            nodo = NodoArbol(
+                TipoNodo.RETORNO,
+                nodos=[self.analizar_expresion_global()]
+            )
+            return nodo
+        elif self.componente_actual.texto == "servir":
+            self.verificar_token("servir")
+            self.verificar_token("(")
+            nodo = NodoArbol(
+                TipoNodo.SIS,
+                nodos=[self.analizar_parametros_inovocacion()])
+            self.verificar_token(")")
+            return nodo
         else:
             raise Exception(
                 f"Error de sintaxis: Instrucción no reconocida "
