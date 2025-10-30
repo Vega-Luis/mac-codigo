@@ -71,21 +71,20 @@ class AnalizadorMacCodigo:
 
         return NodoArbol(TipoNodo.PROGRAMA, nodos=nodos)
 
-    # === ASIGNACIÓN ===
     def analizar_asignacion(self):
         """
         Asignacion ::=
-        Nombre_del_tipo Identificador <- (Literal | Expresion | Invocación)
+        Nombre_del_tipo Identificador <- Expresión
         """
         nodos = []
         # Verificar nombre del tipo
-        self.verificar_tipo(TipoComponente.TIPO)
-        self.__siguiente()
-
+        tipo_dato = self.verificar_tipo_aux()
+        nodos.append(tipo_dato)
         identificador = self.verificar_identificador()
         nodos.append(identificador)
         self.verificar_token("<-")
-        nodos.append(self.analizar_expresion_global())
+        expresion = self.analizar_expresion_global()
+        nodos.append(expresion)
         return NodoArbol(TipoNodo.DECLARACION_VARIABLE, nodos=nodos)
 
     def analizar_condicional(self):
@@ -311,6 +310,21 @@ class AnalizadorMacCodigo:
                 f"columna {self.componente_actual.columna}."
             )
 
+    def verificar_tipo_aux(self):
+        self.verificar_no_fin_archivo()
+        if self.componente_actual.tipo != TipoComponente.TIPO:
+            raise Exception(
+                f"Error de sintaxis: Se esperaba un tipo, "
+                f"se encontró '{self.componente_actual.texto}'\n"
+                f"--> línea {self.componente_actual.linea}, "
+                f"columna {self.componente_actual.columna}")
+        tipo_actual = self.componente_actual.texto
+        self.__siguiente()
+        return NodoArbol(
+            TipoNodo.TIPO_DATO,
+            contenido=tipo_actual
+        )
+
     def verificar_identificador(self):
         if self.componente_actual.tipo not in [
             TipoComponente.IDENTIFICADOR,
@@ -337,29 +351,23 @@ class AnalizadorMacCodigo:
 
     def analizar_declaracion_variable(self):
         """
-        Analiza una declaración de variable.
+        Analiza un bloque de declaración de variables.
 
         Declaración_de_variable ::=
             “ingrediente” Asignación { “,” Asignación } “.”
         """
         nodos = []
-        if self.componente_actual.texto != "ingrediente":
-            raise Exception(
-                f"Se esperaba la palabra reservada'ingrediente',"
-                f"pero se encontró '{self.componente_actual.texto}',"
-                f"línea {self.componente_actual.linea},"
-                f"columna {self.componente_actual.columna}."
-            )
-        self.__siguiente()
+        self.verificar_token("ingrediente")
 
-        while self.componente_actual and self.componente_actual.texto != ".":
+        asignacion = self.analizar_asignacion()
+        nodos.append(asignacion)
+
+        while self.componente_actual.texto == ",":
+            self.verificar_token(",")
             asignacion = self.analizar_asignacion()
-            # Agregar la asignación al nodo de declaración
             nodos.append(asignacion)
-            if self.componente_actual and self.componente_actual.texto == ",":
-                self.__siguiente()  # Saltar la coma
         self.verificar_token(".")
-        return NodoArbol(TipoNodo.DECLARACION_VARIABLE, nodos=nodos)
+        return NodoArbol(TipoNodo.BLOQUE_DECLARACION_VARIABLE, nodos=nodos)
 
     def verificar_fin_archivo(self):
         """
@@ -407,7 +415,7 @@ class AnalizadorMacCodigo:
             elif self.componente_actual.texto == "receta":
                 nodos.append(self.analizar_declaracion_funcion())
         if nodos:
-            return NodoArbol(TipoNodo.DECLARACION, nodos=nodos)
+            return NodoArbol(TipoNodo.SECCION_DECLARACIONES, nodos=nodos)
         return None
 
     def verificar_bloque_instrucciones(self):
@@ -564,3 +572,15 @@ class AnalizadorMacCodigo:
         nodos.append(self.verificar_tipo(TipoComponente.TIPO))
         nodos.append(self.verificar_identificador())
         return NodoArbol(TipoNodo.PARAMETROS, nodos=nodos)
+
+    def verificar_no_fin_archivo(self):
+        """
+        Verifica que no se haya llegado al final del archivo inesperadamente.
+        Si es así, lanza una excepción indicando el error.
+        """
+        if self.componente_actual is None:
+            raise Exception(
+                f"Error: Fin de archivo inesperado: "
+                f"--> línea {self.componentes_lexicos[-1].linea}, "
+                f"columna {self.componentes_lexicos[-1].columna}"
+            )
