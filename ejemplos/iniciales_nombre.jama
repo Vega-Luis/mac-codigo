@@ -1,0 +1,10 @@
+hambriento #Inicio del programa #
+cocinar:
+    tomate nombre <- "MacCodigo",
+    tomate apellido <- "Language",
+    pepinillo inicial_nombre <- nombre!!0,
+    pepinillo inicial_apellido <- apellido!!0,
+    
+    servir("Nombre completo: "; nombre; " "; apellido),
+    servir("Iniciales: "; inicial_nombre; "."; inicial_apellido; ".")..
+satisfecho #Fin del programa #

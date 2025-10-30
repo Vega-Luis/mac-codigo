@@ -15,11 +15,23 @@ compilador/
 │   ├── ejemplo1.mac
 │   ├── ejemplo2.mac
 │   └── ...
+|
+|── analizador/
+|  |──__init__.py
+|  |──analizador.py
+|
+| ── explorador/
+|  |──__ init__.py
+|  |──explorador.py
+|
+|── utils/
+|  |──arbol.py
+|  |──tipo_datos.py
 │
 ├── .gitignore
 ├── LICENSE
 ├── README.md                # Documentación principal del proyecto
-└── explorador.py            # Etapa de exploración (scanner / lexer)
+└── maccodigo.py            # Etapa de exploración (scanner / lexer)
 ```
 
 

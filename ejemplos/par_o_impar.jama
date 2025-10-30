@@ -1,0 +1,12 @@
+hambriento #Inicio del programa #
+cocinar:
+    torta numero <- 8,
+    torta resto <- numero mod 2,
+    
+    servir("El numero es: "; numero),
+    
+    ¿si? resto = 0:
+        servir("Es par")
+    ¡de otro modo!:
+        servir("Es impar")..
+satisfecho #Fin del programa #
