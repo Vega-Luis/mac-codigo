@@ -1,11 +1,38 @@
 hambriento
 
+receta sumar(
+    torta a ;
+    torta b
+):
+    entregar(a+b).
+
+receta restar(
+    torta a ;
+    torta b
+):
+    torta resta <- a - b,
+    entregar(resta)
+.
+
+receta incremento(
+    torta numero;
+    torta veces
+):
+    torta resultado <- numero,
+    para i <- 0 hasta veces:
+        resultado <- resultado + resultado.,
+    entregar(resultado)
+.
+
 cocinar:
     #  Invocar fuciones con multiples conmbinaciones de parametros #
-    sin_p(),
-    p_literal(1),
-    p_literales(1; "texto"; 'a'),
-    p_literales_variables(1; j; i; "texto"; 'a')
+    torta a <- 5,
+    torta b <- 3,
+    torta numero <- 10,
+    torta veces <-10,
+    servir("suma:"; suma(a;b)),
+    servir("resta:"; resta( a+b; 10)),
+    servir("incremento:"; incremento(numero; veces) + 5)
 .
     
 satisfecho

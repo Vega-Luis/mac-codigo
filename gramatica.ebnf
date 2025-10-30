@@ -16,6 +16,7 @@ Instrucción ::= (
     Repetición |
     Bifurcación |
     Retorno |
+    Asignación |
     Identificador Auxiliar_de_instruccion
     )
 Auxiliar_de_instruccion ::= ( "<-"  Expresión) | Auxiliar_de_termino
