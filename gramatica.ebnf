@@ -1,7 +1,7 @@
 Programa ::= “hambriento” { Declaración } Sección_de_código “satisfecho”
 Declaración ::= Declaración_de_variable | Declaración_de_función
 Declaración_de_variable ::= “ingrediente” Asignación { “,” Asignación } “.”
-Asignación ::= Nombre_del_tipo Identificador “<-” ( Literal | Expresión | Invocación )
+Asignación ::= Nombre_del_tipo Identificador “<-” Expresión
 Declaración_de_función ::= “receta” Identificador "(" Parámetros_de_declaración? ")" Bloque_de_instrucciones
 Identificador ::= [A-Za-z_][A-Za-z0-9_]*
 Expresión ::= Término { Operador Termino }
