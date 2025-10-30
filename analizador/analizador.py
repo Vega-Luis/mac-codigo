@@ -530,12 +530,14 @@ class AnalizadorMacCodigo:
         | Literal | "(" Expresión ")" """
         nodos = []
         if self.componente_actual.tipo == TipoComponente.IDENTIFICADOR:
-            nodos.append(self.verificar_identificador())
+            identificador = self.verificar_identificador()
             if (
                 self.componente_actual.texto == "("
                 or self.componente_actual.texto == "!!"
             ):
                 return self.analizar_auxiliar_termino(nodos)
+            else:
+                return identificador
         elif self.componente_actual.tipo in (
             TipoComponente.ENTERO,
             TipoComponente.FLOTANTE,
@@ -546,19 +548,21 @@ class AnalizadorMacCodigo:
             return self.analizar_literal()
         elif self.componente_actual.texto == "(":
             self.verificar_token("(")
-            nodos.append(self.analizar_expresion_global())
+            expresion = self.analizar_expresion_global()
             self.verificar_token(")")
-            return NodoArbol(TipoNodo.TERMINO, nodos=nodos)
+            return expresion
 
     def analizar_expresion_global(self):
         """
         Expresión ::= Término { Operador Termino }
         """
         nodos = []
-        nodos.append(self.analizar_termino())
+        termino = self.analizar_termino()
+        nodos.append(termino)
         while self.componente_actual.tipo == TipoComponente.OPERADOR:
             self.__siguiente()
-            nodos.append(self.analizar_termino())
+            termino = self.analizar_termino()
+            nodos.append(termino)
         return NodoArbol(TipoNodo.EXPRESION, nodos=nodos)
 
     def verificar_parametro_declaracion(self):
