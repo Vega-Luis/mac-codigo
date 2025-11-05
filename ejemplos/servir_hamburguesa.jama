@@ -5,9 +5,11 @@ cocinar:
         tomate nombre <- "Big Mac",  //
         lechuga precio <- 5.99,
         salsa disponible <- mayonesa
-    },
+    }, 
     servir("ID: "; combo!!id),
     servir("Nombre: "; combo!!nombre),
     servir("Precio: "; combo!!precio),
     servir("Disponible: "; combo!!disponible)..
 satisfecho #Fin del programa #
+
+
