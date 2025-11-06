@@ -1,0 +1,31 @@
+hambriento
+ingrediente
+    salsa la_preferida <- mayonesa.
+
+ingrediente
+    torta mi_torta <- 1,
+    lechuga mi_lechuga <- 1.1,
+    tomate mi_tomate <- "soy un tomate".
+
+ingrediente
+    salsa la_rechazada <- ketchup.
+
+receta duplicar_torta(
+    torta carne
+):
+    entregar(carne mul 2).
+
+
+cocinar:
+    #  Invocar fuciones con multiples conmbinaciones de parametros #
+    torta a <- 5,
+    torta b <- 3,
+    torta numero <- 10,
+    torta veces <-10,
+    veces <- veces - 1 + (a mul b),
+    servir("suma:"; suma(a;b)),
+    servir("resta:"; resta( a+b; 10)),
+    servir("incremento:"; incremento(numero; veces) + 5)
+.
+    
+satisfecho
