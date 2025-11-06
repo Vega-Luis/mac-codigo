@@ -559,11 +559,18 @@ class AnalizadorMacCodigo:
         nodos = []
         termino = self.analizar_termino()
         nodos.append(termino)
+        contenido = ""
         while self.componente_actual.tipo == TipoComponente.OPERADOR:
+            contenido += self.componente_actual.texto
+            operador = NodoArbol(
+                TipoNodo.OPERADOR,
+                contenido=self.componente_actual.texto
+            )
+            nodos.append(operador)
             self.__siguiente()
             termino = self.analizar_termino()
             nodos.append(termino)
-        return NodoArbol(TipoNodo.EXPRESION, nodos=nodos)
+        return NodoArbol(TipoNodo.EXPRESION, nodos=nodos, contenido=contenido)
 
     def verificar_parametro_declaracion(self):
         """
