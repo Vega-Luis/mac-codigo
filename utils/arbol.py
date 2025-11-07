@@ -30,6 +30,7 @@ class TipoNodo(Enum):
     SECCION_DECLARACIONES = auto()
     BLOQUE_DECLARACION_VARIABLE = auto()
     TIPO_DATO = auto()
+    LITERAL_COMPUESTO = auto()
 
 class NodoArbol:
     def __init__(self, tipo, contenido=None, nodos=None):

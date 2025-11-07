@@ -1,6 +1,8 @@
 import sys
 from explorador import ExploradorMacCodigo
 from analizador import AnalizadorMacCodigo
+from verificador.verificador import VerificadorSemantico
+
 
 
 def main():
@@ -15,17 +17,42 @@ def main():
     with open(archivo_fuente, encoding="utf-8") as f:
         codigo_fuente = f.read()
 
+    # =============================================================
+    # 1️⃣ ANÁLISIS LÉXICO
+    # =============================================================
     print("=== ANÁLISIS LÉXICO ===")
-    explorardor = ExploradorMacCodigo(codigo_fuente)
-    componentes = explorardor.explorar()
-    explorardor.imprimir_componentes()
-    explorardor.imprimir_errores()
+    explorador = ExploradorMacCodigo(codigo_fuente)
+    componentes = explorador.explorar()
+    explorador.imprimir_componentes()
+    explorador.imprimir_errores()
 
+    # =============================================================
+    # 2️⃣ ANÁLISIS SINTÁCTICO
+    # =============================================================
     print("\n=== ANÁLISIS SINTÁCTICO ===")
     analizador = AnalizadorMacCodigo(componentes)
-    analizador.analizar()
+    try:
+        analizador.analizar()
+        print("✔ Análisis sintáctico completado correctamente.")
+    except Exception as e:
+        print(f"❌ Error sintáctico: {e}")
+        sys.exit(1)
+
     print("\n=== ÁRBOL DE SINTAXIS ABSTRACTA ===")
     analizador.asa.imprimir()
+
+    # =============================================================
+    # 3️⃣ VERIFICACIÓN SEMÁNTICA
+    # =============================================================
+    print("\n=== VERIFICACIÓN SEMÁNTICA ===")
+    verificador = VerificadorSemantico(analizador.asa, verbose=True)
+    errores = verificador.verificar()
+
+    if errores:
+        print("\n".join(errores))
+    else:
+        print("✔ Verificación semántica completada sin errores.")
+
 
 
 if __name__ == "__main__":
