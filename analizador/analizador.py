@@ -445,7 +445,7 @@ class AnalizadorMacCodigo:
         if self.componente_actual and self.componente_actual.texto == ".":
             self.verificar_token(".")
 
-        print(f"[DEBUG] Próximo token tras cerrar bloque: {self.componente_actual.texto if self.componente_actual else 'EOF'}")
+        
         return NodoArbol(TipoNodo.BLOQUE_INSTRUCCIONES, nodos=instrucciones)
 
 

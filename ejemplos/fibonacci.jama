@@ -12,3 +12,5 @@ torta limite <- 6,
 para i <- 0 hasta limite:
 servir("Fib("; i; ") = "; fibonacci(i))..
 satisfecho #Fin del programa #
+
+
