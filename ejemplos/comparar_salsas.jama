@@ -4,16 +4,16 @@ cocinar:
     salsa es_cliente_vip <- ketchup,
     lechuga precio <- 100.0,
     
-    ¿si? tiene_descuento = mayonesa
+    ¿si? tiene_descuento = mayonesa:
         precio <- precio - 20.0,
-        servir("Descuento aplicado")
+        servir("Descuento aplicado").
     ¡de otro modo!:
         servir("Sin descuento").
     
     ¿si? es_cliente_vip = mayonesa:
-        servir("Cliente VIP")
+        servir("Cliente VIP").
     ¡de otro modo!:
         servir("Cliente regular").
     
-    servir("Precio final: "; precio)..
+    servir("Precio final: "; precio).
 satisfecho #Fin del programa #

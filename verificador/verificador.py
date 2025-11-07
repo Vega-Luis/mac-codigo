@@ -66,7 +66,9 @@ class VerificadorSemantico:
             return None
 
         if self.verbose:
-            print(f"→ Verificando nodo {nodo.tipo.name} ({nodo.contenido or ''})")
+            tipo = nodo.tipo.name if nodo and getattr(nodo, "tipo", None) else "(sin tipo)"
+            print(f"→ Verificando nodo {tipo} ({nodo.contenido or ''})")
+
 
         if nodo.tipo == TipoNodo.DECLARACION_VARIABLE:
             self._verificar_declaracion_variable(nodo)
@@ -175,10 +177,49 @@ class VerificadorSemantico:
             self._error("La condición de '¿si?' debe ser de tipo 'salsa' (booleano).")
 
     def _verificar_repeticion(self, nodo):
-        tipo_inicio = self._verificar_expresion(nodo.nodos[1])
-        tipo_fin = self._verificar_expresion(nodo.nodos[2])
-        if tipo_inicio != "torta" or tipo_fin != "torta":
-            self._error("El rango del ciclo 'para' debe ser de tipo 'torta' (entero).")
+        """
+        Verifica una estructura de repetición (bucle 'para').
+        Estructura esperada:
+        [identificador, (expresión_inicio)?, expresión_fin, bloque]
+        """
+        if not nodo or not nodo.nodos:
+            return
+
+        identificador = nodo.nodos[0]
+        tipo_inicio = None
+        tipo_fin = None
+        bloque = None
+
+        # Casos posibles:
+        if len(nodo.nodos) == 4:
+            # para i <- expr_inicio hasta expr_fin: bloque
+            tipo_inicio = self._verificar_expresion(nodo.nodos[1])
+            tipo_fin = self._verificar_expresion(nodo.nodos[2])
+            bloque = nodo.nodos[3]
+
+        elif len(nodo.nodos) == 3:
+            # para i hasta expr_fin: bloque
+            tipo_fin = self._verificar_expresion(nodo.nodos[1])
+            bloque = nodo.nodos[2]
+
+        elif len(nodo.nodos) == 2:
+            # para i hasta bloque (caso muy simplificado)
+            bloque = nodo.nodos[1]
+
+        else:
+            print(f"[WARN] Repetición con estructura inesperada ({len(nodo.nodos)} hijos).")
+            return
+
+        # Validar que las expresiones numéricas sean del tipo torta o lechuga
+        for tipo in [tipo_inicio, tipo_fin]:
+            if tipo and tipo not in ["torta", "lechuga"]:
+                self._error(f"El límite del bucle 'para' debe ser numérico, no '{tipo}'.")
+
+        # Verificar bloque interno
+        if bloque:
+            self._verificar_nodo(bloque)
+
+
 
     def _verificar_invocacion(self, nodo):
         nombre_func = nodo.nodos[0].contenido
@@ -203,6 +244,9 @@ class VerificadorSemantico:
     def _verificar_expresion(self, nodo):
         if nodo is None:
             return None
+        
+        if not hasattr(nodo, "tipo") or nodo.tipo is None:
+            return None
 
         # Literales
         if nodo.tipo == TipoNodo.ENTERO:
@@ -219,7 +263,8 @@ class VerificadorSemantico:
             return "salsa"
 
         # Condiciones del tipo (IDENTIFICADOR, COMPARADOR, ENTERO)
-        if nodo.tipo.name == "CONDICION":
+        if hasattr(nodo, "tipo") and nodo.tipo and nodo.tipo.name == "CONDICION":
+
             # Verifica los lados y marca tipo booleano
             izq = self._verificar_expresion(nodo.nodos[0])
             der = self._verificar_expresion(nodo.nodos[-1])
@@ -254,15 +299,25 @@ class VerificadorSemantico:
         return None
 
     def _extraer_parametros(self, nodo):
+        """
+        Extrae pares (tipo, identificador) de los parámetros de una función.
+        Ejemplo: torta a ; torta b → [("torta", "a"), ("torta", "b")]
+        """
         pares = []
         if not nodo or not nodo.nodos:
             return pares
-        for i in range(len(nodo.nodos)):
-            hijo = nodo.nodos[i]
-            if hijo.tipo == TipoNodo.IDENTIFICADOR:
-                tipo = nodo.nodos[i - 1].contenido if i > 0 else "desconocido"
-                pares.append((tipo, hijo.contenido))
+
+        tipo_actual = None
+        for hijo in nodo.nodos:
+            if hijo.tipo == TipoNodo.TIPO_DATO:
+                tipo_actual = hijo.contenido
+            elif hijo.tipo == TipoNodo.IDENTIFICADOR:
+                if tipo_actual is None:
+                    tipo_actual = "torta"  # tipo por defecto si falta
+                pares.append((tipo_actual, hijo.contenido))
+                tipo_actual = None
         return pares
+
 
     def _contar_parametros_invocacion(self, nodo):
         if len(nodo.nodos) < 2:
@@ -317,6 +372,8 @@ class VerificadorSemantico:
             return
         indent = "  " * nivel
         decorador = f" [{nodo.decorador}]" if hasattr(nodo, "decorador") and nodo.decorador else ""
-        print(f"{indent}- {nodo.tipo.name} {nodo.contenido or ''}{decorador}")
+        tipo = nodo.tipo.name if nodo and getattr(nodo, "tipo", None) else "(sin tipo)"
+        print(f"{indent}- {tipo} {nodo.contenido or ''}{decorador}")
+
         for hijo in nodo.nodos or []:
             self._imprimir_arbol(hijo, nivel + 1)

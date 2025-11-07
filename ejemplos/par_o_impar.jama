@@ -6,7 +6,7 @@ cocinar:
     servir("El numero es: "; numero),
     
     ¿si? resto = 0:
-        servir("Es par")
+        servir("Es par").
     ¡de otro modo!:
-        servir("Es impar")..
+        servir("Es impar").
 satisfecho #Fin del programa #

@@ -6,5 +6,5 @@ cocinar:
     pepinillo inicial_apellido <- apellido!!0,
     
     servir("Nombre completo: "; nombre; " "; apellido),
-    servir("Iniciales: "; inicial_nombre; "."; inicial_apellido; ".")..
+    servir("Iniciales: "; inicial_nombre; "."; inicial_apellido; ".").
 satisfecho #Fin del programa #

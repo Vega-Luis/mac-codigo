@@ -89,16 +89,23 @@ class AnalizadorMacCodigo:
 
     def analizar_condicional(self):
         """
-        Condicional ::=
-            “¿si?” Comparación Bloque_de_instrucciones “¡de otro modo!”
+        Condicional ::= 
+            “¿si?” Comparación Bloque_de_instrucciones [“¡de otro modo!” Bloque_de_instrucciones]
         """
         nodos = []
         self.verificar_token("¿si?")
         nodos.append(self.analizar_condicion())
         nodos.append(self.verificar_bloque_instrucciones())
-        self.verificar_token("¡de otro modo!")
-        nodos.append(self.verificar_bloque_instrucciones())
+
+        # Si existe la rama '¡de otro modo!' opcional
+        if self.componente_actual and self.componente_actual.texto == "¡de otro modo!":
+            self.verificar_token("¡de otro modo!")
+            if self.componente_actual and self.componente_actual.texto == ":":
+                self.verificar_token(":")
+            nodos.append(self.verificar_bloque_instrucciones())
+
         return NodoArbol(TipoNodo.CONDICIONAL, nodos=nodos)
+
 
     # === REPETICIÓN ===
     def analizar_repeticion(self):
@@ -419,22 +426,28 @@ class AnalizadorMacCodigo:
         return None
 
     def verificar_bloque_instrucciones(self):
-        """
-        Verifica que haya un bloque de instrucciones.
-        Si no es así, lanza una excepción indicando el error.
-        """
         instrucciones = []
-        self.verificar_token(":")
+        if self.componente_actual and self.componente_actual.texto == ":":
+            self.verificar_token(":")
+
         instrucciones.append(self.analizar_instruccion())
 
-        while (
-            self.componente_actual is not None
-            and self.componente_actual.texto == ","
+        while self.componente_actual and (
+            self.componente_actual.texto == "," or
+            self.componente_actual.texto in ["¿si?", "para", "servir", "entregar"] or
+            self.componente_actual.tipo in [TipoComponente.IDENTIFICADOR, TipoComponente.TIPO]
         ):
-            self.verificar_token(",")
+            if self.componente_actual.texto == ",":
+                self.verificar_token(",")
             instrucciones.append(self.analizar_instruccion())
-        self.verificar_token(".")
+
+        # 👇 cambio aquí
+        if self.componente_actual and self.componente_actual.texto == ".":
+            self.verificar_token(".")
+
+        print(f"[DEBUG] Próximo token tras cerrar bloque: {self.componente_actual.texto if self.componente_actual else 'EOF'}")
         return NodoArbol(TipoNodo.BLOQUE_INSTRUCCIONES, nodos=instrucciones)
+
 
     def verificar_token(self, token_esperado):
         """

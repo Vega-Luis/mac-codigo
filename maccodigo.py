@@ -33,9 +33,9 @@ def main():
     analizador = AnalizadorMacCodigo(componentes)
     try:
         analizador.analizar()
-        print("✔ Análisis sintáctico completado correctamente.")
+        print(" Análisis sintáctico completado correctamente.")
     except Exception as e:
-        print(f"❌ Error sintáctico: {e}")
+        print(f" Error sintáctico: {e}")
         sys.exit(1)
 
     print("\n=== ÁRBOL DE SINTAXIS ABSTRACTA ===")
@@ -51,7 +51,7 @@ def main():
     if errores:
         print("\n".join(errores))
     else:
-        print("✔ Verificación semántica completada sin errores.")
+        print(" Verificación semántica completada sin errores.")
 
 
 
