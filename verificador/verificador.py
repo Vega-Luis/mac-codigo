@@ -69,43 +69,49 @@ class VerificadorSemantico:
             tipo = nodo.tipo.name if nodo and getattr(nodo, "tipo", None) else "(sin tipo)"
             print(f"→ Verificando nodo {tipo} ({nodo.contenido or ''})")
 
-
         if nodo.tipo == TipoNodo.DECLARACION_VARIABLE:
             self._verificar_declaracion_variable(nodo)
+            return
 
         elif nodo.tipo == TipoNodo.ASIGNACION:
             self._verificar_asignacion(nodo)
+            return
 
         elif nodo.tipo == TipoNodo.DECLARACION_FUNCION:
             self._verificar_funcion(nodo)
+            return
 
         elif nodo.tipo == TipoNodo.RETORNO:
             self._verificar_retorno(nodo)
+            return
 
         elif nodo.tipo == TipoNodo.CONDICIONAL:
             self._verificar_condicional(nodo)
+            return  # ahora _verificar_condicional recorre sus bloques
 
         elif nodo.tipo == TipoNodo.REPETICION:
             self._verificar_repeticion(nodo)
+            return
 
         elif nodo.tipo in [TipoNodo.BLOQUE_INSTRUCCIONES, TipoNodo.SECCION_CODIGO]:
             self._nuevo_ambito()
             for hijo in nodo.nodos:
                 self._verificar_nodo(hijo)
             self._cerrar_ambito()
+            return
 
         elif nodo.tipo == TipoNodo.INVOCACION:
             self._verificar_invocacion(nodo)
+            return
 
         elif nodo.tipo == TipoNodo.EXPRESION:
             tipo = self._verificar_expresion(nodo)
-            nodo.decorador = tipo  # ← Árbol decorado
+            nodo.decorador = tipo
             return tipo
 
-        # Recorre hijos recursivamente
+        # Fallback: solo para tipos no manejados explícitamente
         for hijo in nodo.nodos or []:
             self._verificar_nodo(hijo)
-
     # ==========================================================
     # REGLAS SEMÁNTICAS
     # ==========================================================
@@ -163,18 +169,23 @@ class VerificadorSemantico:
         nodo.decorador = tipo_valor
 
     def _verificar_condicional(self, nodo):
-        cond = nodo.nodos[0]
-
-        # Si es un nodo de tipo CONDICION (con comparador)
-        if cond.tipo.name == "CONDICION":
-            tipo_cond = self._verificar_expresion(cond)
-            nodo.decorador = "salsa"
+        if not nodo.nodos:
             return
 
-        # Si es una expresión normal
-        tipo_cond = self._verificar_expresion(cond)
-        if tipo_cond != "salsa":
-            self._error("La condición de '¿si?' debe ser de tipo 'salsa' (booleano).")
+        cond = nodo.nodos[0]
+
+        # CONDICION (con comparador) o expresión booleana
+        if cond.tipo.name == "CONDICION":
+            _ = self._verificar_expresion(cond)
+            nodo.decorador = "salsa"
+        else:
+            tipo_cond = self._verificar_expresion(cond)
+            if tipo_cond != "salsa":
+                self._error("La condición de '¿si?' debe ser de tipo 'salsa' (booleano).")
+
+        # Verificar bloques (entonces y opcionalmente sino)
+        for i in range(1, len(nodo.nodos)):
+            self._verificar_nodo(nodo.nodos[i])
 
     def _verificar_repeticion(self, nodo):
         """
