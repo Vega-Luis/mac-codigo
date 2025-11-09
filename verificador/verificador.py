@@ -17,6 +17,15 @@ class VerificadorSemantico:
         # Registro de funciones: nombre -> (tipo_retorno, [(tipo, nombre_param)])
         self.funciones = {}
 
+        # Árbol de ámbitos para impresión anidada
+        self.ambitos_arbol = {
+            "nombre": "Global",
+            "tipo": "GLOBAL",
+            "simbolos": {},
+            "hijos": [],
+        }
+        self._stack_ambitos_arbol = [self.ambitos_arbol]
+
         # Tipos permitidos en MacCódigo
         self.TIPOS_PRIMITIVOS = ["torta", "lechuga", "pepinillo", "tomate", "salsa"]
         self.TIPOS_COMPUESTOS = ["hamburguesa", "cajita", "cajita_lechuga"]
@@ -44,7 +53,7 @@ class VerificadorSemantico:
 
         if self.verbose:
             print("\n=== TABLAS DE SÍMBOLOS ===")
-            self._imprimir_tablas()
+            self._imprimir_tablas_anidada()
 
             print("\n=== ÁRBOL DECORADO ===")
             self._imprimir_arbol(self.asa.raiz)
@@ -94,7 +103,8 @@ class VerificadorSemantico:
             return
 
         elif nodo.tipo in [TipoNodo.BLOQUE_INSTRUCCIONES, TipoNodo.SECCION_CODIGO]:
-            self._nuevo_ambito()
+            nombre_ambito = nodo.contenido or nodo.tipo.name
+            self._nuevo_ambito(nombre_ambito, nodo.tipo.name)
             for hijo in nodo.nodos:
                 self._verificar_nodo(hijo)
             self._cerrar_ambito()
@@ -123,6 +133,8 @@ class VerificadorSemantico:
             self._error(f"Variable '{nombre}' redeclarada en el mismo ámbito.")
         else:
             self.pila_ambitos[-1][nombre] = tipo
+            # Registrar también en el árbol de ámbitos
+            self._stack_ambitos_arbol[-1]["simbolos"][nombre] = tipo
             nodo.decorador = tipo
 
     def _verificar_asignacion(self, nodo):
@@ -151,9 +163,10 @@ class VerificadorSemantico:
         self.funciones[nombre] = (tipo_retorno, tipos_params)
         nodo.decorador = f"func({', '.join(t for t, _ in tipos_params)}) -> {tipo_retorno}"
 
-        self._nuevo_ambito()
+        self._nuevo_ambito(nombre, TipoNodo.DECLARACION_FUNCION.name)
         for tipo, ident in tipos_params:
             self.pila_ambitos[-1][ident] = tipo
+            self._stack_ambitos_arbol[-1]["simbolos"][ident] = tipo
 
         # Verificar bloque interno
         if len(nodo.nodos) > 2:
@@ -352,11 +365,23 @@ class VerificadorSemantico:
             return self.COMPATIBLES[(t2, t1)]
         return t1
 
-    def _nuevo_ambito(self):
+    def _nuevo_ambito(self, nombre=None, tipo=None):
         self.pila_ambitos.append({})
+        # Registrar el nuevo ámbito en el árbol
+        nodo = {
+            "nombre": nombre or "Ámbito",
+            "tipo": tipo or "AMBITO",
+            "simbolos": {},
+            "hijos": [],
+        }
+        self._stack_ambitos_arbol[-1]["hijos"].append(nodo)
+        self._stack_ambitos_arbol.append(nodo)
 
     def _cerrar_ambito(self):
         self.pila_ambitos.pop()
+        # Cerrar el ámbito en el árbol
+        if len(self._stack_ambitos_arbol) > 1:
+            self._stack_ambitos_arbol.pop()
 
     def _error(self, mensaje):
         self.errores.append(f"Error semántico: {mensaje}")
@@ -378,13 +403,41 @@ class VerificadorSemantico:
                 params_txt = ", ".join(f"{t} {n}" for t, n in params)
                 print(f"  {nombre}({params_txt}) -> {tipo_ret}")
 
-    def _imprimir_arbol(self, nodo, nivel=0):
+    def _imprimir_tablas_anidada(self):
+        def imprimir(nodo, nivel=0):
+            indent = "  " * nivel
+            print(f"{indent}{nodo['nombre']} ({nodo['tipo']})")
+            if nodo["simbolos"]:
+                for nombre, tipo in nodo["simbolos"].items():
+                    print(f"{indent}  {nombre:<15} -> {tipo}")
+            else:
+                print(f"{indent}  (Vacío)")
+            for hijo in nodo["hijos"]:
+                imprimir(hijo, nivel + 1)
+
+        imprimir(self.ambitos_arbol, 0)
+
+        if self.funciones:
+            print("\nFunciones declaradas:")
+            for nombre, (tipo_ret, params) in self.funciones.items():
+                params_txt = ", ".join(f"{t} {n}" for t, n in params)
+                print(f"  {nombre}({params_txt}) -> {tipo_ret}")
+
+    def _imprimir_arbol(self, nodo, prefijo="", es_ultimo=True):
         if nodo is None:
             return
-        indent = "  " * nivel
-        decorador = f" [{nodo.decorador}]" if hasattr(nodo, "decorador") and nodo.decorador else ""
+        # Conectores estilo árbol con "palitos" ASCII
+        conector = "`-- " if es_ultimo else "|-- "
         tipo = nodo.tipo.name if nodo and getattr(nodo, "tipo", None) else "(sin tipo)"
-        print(f"{indent}- {tipo} {nodo.contenido or ''}{decorador}")
+        contenido = nodo.contenido or ""
+        base = f"{tipo}: {contenido}" if contenido else tipo
+        decorador = f" [{nodo.decorador}]" if hasattr(nodo, "decorador") and nodo.decorador else ""
+        print(f"{prefijo}{conector}{base}{decorador}")
 
-        for hijo in nodo.nodos or []:
-            self._imprimir_arbol(hijo, nivel + 1)
+        hijos = nodo.nodos or []
+        if not hijos:
+            return
+        nuevo_prefijo = f"{prefijo}    " if es_ultimo else f"{prefijo}|   "
+        for i, hijo in enumerate(hijos):
+            es_ult = (i == len(hijos) - 1)
+            self._imprimir_arbol(hijo, nuevo_prefijo, es_ult)
