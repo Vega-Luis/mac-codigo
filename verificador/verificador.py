@@ -398,7 +398,7 @@ class VerificadorSemantico:
                     
                     tipo_der = self._verificar_expresion(nodo.nodos[i + 1])
                     
-                    # ✅ VALIDACIÓN: Operadores aritméticos con booleanos
+                    # VALIDACIÓN: Operadores aritméticos con booleanos
                     if operador_texto in self.OPERADORES_ARITMETICOS:
                         if tipo_izq == "salsa":
                             self._error(
