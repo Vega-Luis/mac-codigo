@@ -1,0 +1,7 @@
+hambriento
+cocinar:
+    torta numero <- 42,
+    tomate texto <- "Hola",
+    # Error: No se puede sumar un número con un texto
+    torta resultado <- numero + texto.
+satisfecho

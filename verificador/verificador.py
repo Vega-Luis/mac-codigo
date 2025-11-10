@@ -5,6 +5,12 @@ class VerificadorSemantico:
     """
     Verificador semántico para el lenguaje MacCódigo.
     Recorre el ASA, valida tipos, maneja alcances y decora el árbol con tipos.
+    
+    Versión mejorada con:
+    - Constantes booleanas predefinidas (mayonesa/ketchup)
+    - Mensajes de error con línea y columna
+    - Validación estricta de operaciones con booleanos
+    - Mejor manejo de ámbitos anidados
     """
 
     def __init__(self, arbol_sintaxis, verbose=False):
@@ -13,7 +19,12 @@ class VerificadorSemantico:
         self.verbose = verbose
 
         # Pila de ámbitos: lista de diccionarios (nombre -> tipo)
-        self.pila_ambitos = [{}]
+        # Inicializar con constantes booleanas predefinidas
+        self.pila_ambitos = [{
+            "mayonesa": "salsa",  # true
+            "ketchup": "salsa",   # false
+        }]
+        
         # Registro de funciones: nombre -> (tipo_retorno, [(tipo, nombre_param)])
         self.funciones = {}
 
@@ -21,7 +32,10 @@ class VerificadorSemantico:
         self.ambitos_arbol = {
             "nombre": "Global",
             "tipo": "GLOBAL",
-            "simbolos": {},
+            "simbolos": {
+                "mayonesa": "salsa (const)",
+                "ketchup": "salsa (const)",
+            },
             "hijos": [],
         }
         self._stack_ambitos_arbol = [self.ambitos_arbol]
@@ -37,6 +51,12 @@ class VerificadorSemantico:
             ("tomate", "salsa"): "tomate",
             ("salsa", "tomate"): "tomate",
         }
+
+        # Operadores aritméticos (no permitidos con booleanos)
+        self.OPERADORES_ARITMETICOS = ["+", "-", "mul", "div", "mod"]
+        
+        # Operadores lógicos (solo para booleanos)
+        self.OPERADORES_LOGICOS = ["and", "or", "not"]
 
     # ==========================================================
     # MÉTODO PRINCIPAL
@@ -78,7 +98,19 @@ class VerificadorSemantico:
             tipo = nodo.tipo.name if nodo and getattr(nodo, "tipo", None) else "(sin tipo)"
             print(f"→ Verificando nodo {tipo} ({nodo.contenido or ''})")
 
-        if nodo.tipo == TipoNodo.DECLARACION_VARIABLE:
+        # Manejo de SECCION_DECLARACIONES
+        if nodo.tipo == TipoNodo.SECCION_DECLARACIONES:
+            for hijo in nodo.nodos:
+                self._verificar_nodo(hijo)
+            return
+
+        # Manejo de BLOQUE_DECLARACION_VARIABLE
+        elif nodo.tipo == TipoNodo.BLOQUE_DECLARACION_VARIABLE:
+            for hijo in nodo.nodos:
+                self._verificar_nodo(hijo)
+            return
+
+        elif nodo.tipo == TipoNodo.DECLARACION_VARIABLE:
             self._verificar_declaracion_variable(nodo)
             return
 
@@ -96,7 +128,7 @@ class VerificadorSemantico:
 
         elif nodo.tipo == TipoNodo.CONDICIONAL:
             self._verificar_condicional(nodo)
-            return  # ahora _verificar_condicional recorre sus bloques
+            return
 
         elif nodo.tipo == TipoNodo.REPETICION:
             self._verificar_repeticion(nodo)
@@ -114,6 +146,11 @@ class VerificadorSemantico:
             self._verificar_invocacion(nodo)
             return
 
+        # Manejo de SIS (servir)
+        elif nodo.tipo == TipoNodo.SIS:
+            self._verificar_sis(nodo)
+            return
+
         elif nodo.tipo == TipoNodo.EXPRESION:
             tipo = self._verificar_expresion(nodo)
             nodo.decorador = tipo
@@ -122,6 +159,7 @@ class VerificadorSemantico:
         # Fallback: solo para tipos no manejados explícitamente
         for hijo in nodo.nodos or []:
             self._verificar_nodo(hijo)
+
     # ==========================================================
     # REGLAS SEMÁNTICAS
     # ==========================================================
@@ -130,38 +168,56 @@ class VerificadorSemantico:
         nombre = nodo.nodos[1].contenido
 
         if nombre in self.pila_ambitos[-1]:
-            self._error(f"Variable '{nombre}' redeclarada en el mismo ámbito.")
+            self._error(f"Variable '{nombre}' redeclarada en el mismo ámbito.", nodo.nodos[1])
         else:
             self.pila_ambitos[-1][nombre] = tipo
             # Registrar también en el árbol de ámbitos
             self._stack_ambitos_arbol[-1]["simbolos"][nombre] = tipo
             nodo.decorador = tipo
+            
+            # Verificar la expresión de inicialización
+            if len(nodo.nodos) > 2:
+                tipo_exp = self._verificar_expresion(nodo.nodos[2])
+                if tipo_exp and not self._compatibles(tipo, tipo_exp):
+                    self._error(
+                        f"Tipos incompatibles en declaración: '{tipo}' <- '{tipo_exp}'.",
+                        nodo.nodos[1]
+                    )
 
     def _verificar_asignacion(self, nodo):
         nombre = nodo.nodos[0].contenido
         tipo_var = self._buscar_variable(nombre)
 
         if not tipo_var:
-            self._error(f"Variable '{nombre}' no declarada antes de su uso.")
+            self._error(f"Variable '{nombre}' no declarada antes de su uso.", nodo.nodos[0])
             return
 
         tipo_exp = self._verificar_expresion(nodo.nodos[1])
         if tipo_exp and not self._compatibles(tipo_var, tipo_exp):
-            self._error(f"Tipos incompatibles en asignación: '{tipo_var}' <- '{tipo_exp}'.")
+            self._error(
+                f"Tipos incompatibles en asignación: '{tipo_var}' <- '{tipo_exp}'.",
+                nodo.nodos[0]
+            )
 
         nodo.decorador = tipo_var
 
     def _verificar_funcion(self, nodo):
         nombre = nodo.nodos[0].contenido
         if nombre in self.funciones:
-            self._error(f"Función '{nombre}' redeclarada.")
+            self._error(f"Función '{nombre}' redeclarada.", nodo.nodos[0])
             return
 
         parametros = nodo.nodos[1]
         tipos_params = self._extraer_parametros(parametros)
         tipo_retorno = "void"
         self.funciones[nombre] = (tipo_retorno, tipos_params)
-        nodo.decorador = f"func({', '.join(t for t, _ in tipos_params)}) -> {tipo_retorno}"
+        
+        # Registrar función en ámbito global
+        firma = f"func({', '.join(t for t, _ in tipos_params)}) -> {tipo_retorno}"
+        self.pila_ambitos[0][nombre] = firma
+        self._stack_ambitos_arbol[0]["simbolos"][nombre] = firma
+        
+        nodo.decorador = firma
 
         self._nuevo_ambito(nombre, TipoNodo.DECLARACION_FUNCION.name)
         for tipo, ident in tipos_params:
@@ -176,7 +232,7 @@ class VerificadorSemantico:
 
     def _verificar_retorno(self, nodo):
         if not nodo.nodos:
-            self._error("Retorno sin valor.")
+            self._error("Retorno sin valor.", nodo)
             return
         tipo_valor = self._verificar_expresion(nodo.nodos[0])
         nodo.decorador = tipo_valor
@@ -193,8 +249,12 @@ class VerificadorSemantico:
             nodo.decorador = "salsa"
         else:
             tipo_cond = self._verificar_expresion(cond)
-            if tipo_cond != "salsa":
-                self._error("La condición de '¿si?' debe ser de tipo 'salsa' (booleano).")
+            if tipo_cond and tipo_cond != "salsa":
+                self._error(
+                    f"La condición de '¿si?' debe ser de tipo 'salsa' (booleano), "
+                    f"pero se encontró tipo '{tipo_cond}'.",
+                    cond
+                )
 
         # Verificar bloques (entonces y opcionalmente sino)
         for i in range(1, len(nodo.nodos)):
@@ -231,24 +291,31 @@ class VerificadorSemantico:
             bloque = nodo.nodos[1]
 
         else:
-            print(f"[WARN] Repetición con estructura inesperada ({len(nodo.nodos)} hijos).")
+            if self.verbose:
+                print(f"[WARN] Repetición con estructura inesperada ({len(nodo.nodos)} hijos).")
             return
 
         # Validar que las expresiones numéricas sean del tipo torta o lechuga
-        for tipo in [tipo_inicio, tipo_fin]:
-            if tipo and tipo not in ["torta", "lechuga"]:
-                self._error(f"El límite del bucle 'para' debe ser numérico, no '{tipo}'.")
+        for i, tipo in enumerate([tipo_inicio, tipo_fin]):
+            if tipo and tipo not in ["torta", "lechuga", None]:
+                expr_nodo = nodo.nodos[1] if i == 0 and len(nodo.nodos) > 1 else nodo.nodos[1 if len(nodo.nodos) == 3 else 2]
+                self._error(
+                    f"El límite del bucle 'para' debe ser numérico (torta/lechuga), "
+                    f"pero se encontró tipo '{tipo}'.",
+                    expr_nodo
+                )
 
         # Verificar bloque interno
         if bloque:
             self._verificar_nodo(bloque)
 
-
-
     def _verificar_invocacion(self, nodo):
         nombre_func = nodo.nodos[0].contenido
         if nombre_func not in self.funciones:
-            self._error(f"Función '{nombre_func}' no declarada antes de su invocación.")
+            self._error(
+                f"Función '{nombre_func}' no declarada antes de su invocación.",
+                nodo.nodos[0]
+            )
             return
 
         tipo_ret, params_decl = self.funciones[nombre_func]
@@ -256,11 +323,19 @@ class VerificadorSemantico:
 
         if len(params_decl) != len(params_llamada):
             self._error(
-                f"La función '{nombre_func}' espera {len(params_decl)} parámetros, "
-                f"pero se pasaron {len(params_llamada)}."
+                f"La función '{nombre_func}' espera {len(params_decl)} parámetro(s), "
+                f"pero se pasaron {len(params_llamada)}.",
+                nodo.nodos[0]
             )
 
         nodo.decorador = tipo_ret
+
+    def _verificar_sis(self, nodo):
+        """Verifica la instrucción 'servir' (output)"""
+        if nodo.nodos and nodo.nodos[0].nodos:
+            for param in nodo.nodos[0].nodos:
+                self._verificar_expresion(param)
+        nodo.decorador = "void"
 
     # ==========================================================
     # EXPRESIONES
@@ -274,21 +349,33 @@ class VerificadorSemantico:
 
         # Literales
         if nodo.tipo == TipoNodo.ENTERO:
+            nodo.decorador = "torta"
             return "torta"
         elif nodo.tipo == TipoNodo.FLOTANTE:
+            nodo.decorador = "lechuga"
             return "lechuga"
         elif nodo.tipo == TipoNodo.STRING:
+            nodo.decorador = "tomate"
             return "tomate"
         elif nodo.tipo == TipoNodo.BOOLEANO:
+            nodo.decorador = "salsa"
             return "salsa"
+        elif nodo.tipo == TipoNodo.CARACTER:
+            nodo.decorador = "pepinillo"
+            return "pepinillo"
         elif nodo.tipo == TipoNodo.IDENTIFICADOR:
-            return self._buscar_variable(nodo.contenido)
+            tipo = self._buscar_variable(nodo.contenido)
+            if not tipo:
+                self._error(f"Variable '{nodo.contenido}' no declarada antes de su uso.", nodo)
+                return None
+            nodo.decorador = tipo
+            return tipo
         elif nodo.tipo == TipoNodo.COMPARADOR:
+            nodo.decorador = "salsa"
             return "salsa"
 
         # Condiciones del tipo (IDENTIFICADOR, COMPARADOR, ENTERO)
         if hasattr(nodo, "tipo") and nodo.tipo and nodo.tipo.name == "CONDICION":
-
             # Verifica los lados y marca tipo booleano
             izq = self._verificar_expresion(nodo.nodos[0])
             der = self._verificar_expresion(nodo.nodos[-1])
@@ -297,26 +384,54 @@ class VerificadorSemantico:
 
         # Expresiones compuestas normales
         if nodo.tipo == TipoNodo.EXPRESION and nodo.nodos:
+            # Si contiene comparadores, es una expresión booleana
             if any(hijo.tipo == TipoNodo.COMPARADOR for hijo in nodo.nodos):
                 nodo.decorador = "salsa"
                 return "salsa"
 
             tipo_izq = self._verificar_expresion(nodo.nodos[0])
+            
             for i in range(1, len(nodo.nodos), 2):
-                tipo_der = self._verificar_expresion(nodo.nodos[i + 1])
-                if not self._compatibles(tipo_izq, tipo_der):
-                    self._error(f"Operación inválida entre tipos '{tipo_izq}' y '{tipo_der}'.")
-                tipo_izq = self._resolver_tipo(tipo_izq, tipo_der)
+                if i + 1 < len(nodo.nodos):
+                    operador = nodo.nodos[i]
+                    operador_texto = operador.contenido if operador else ""
+                    
+                    tipo_der = self._verificar_expresion(nodo.nodos[i + 1])
+                    
+                    # ✅ VALIDACIÓN: Operadores aritméticos con booleanos
+                    if operador_texto in self.OPERADORES_ARITMETICOS:
+                        if tipo_izq == "salsa":
+                            self._error(
+                                f"No se puede usar el operador aritmético '{operador_texto}' "
+                                f"con tipo booleano (salsa).",
+                                operador
+                            )
+                        if tipo_der == "salsa":
+                            self._error(
+                                f"No se puede usar el operador aritmético '{operador_texto}' "
+                                f"con tipo booleano (salsa).",
+                                nodo.nodos[i + 1]
+                            )
+                    
+                    # Validar compatibilidad de tipos
+                    if tipo_izq and tipo_der and not self._compatibles(tipo_izq, tipo_der):
+                        self._error(
+                            f"Operación inválida entre tipos '{tipo_izq}' y '{tipo_der}'.",
+                            operador
+                        )
+                    
+                    tipo_izq = self._resolver_tipo(tipo_izq, tipo_der)
+            
             nodo.decorador = tipo_izq
             return tipo_izq
 
         return None
 
-
     # ==========================================================
     # FUNCIONES AUXILIARES
     # ==========================================================
     def _buscar_variable(self, nombre):
+        """Busca una variable en la pila de ámbitos (desde el más interno al más externo)"""
         for ambito in reversed(self.pila_ambitos):
             if nombre in ambito:
                 return ambito[nombre]
@@ -342,8 +457,8 @@ class VerificadorSemantico:
                 tipo_actual = None
         return pares
 
-
     def _contar_parametros_invocacion(self, nodo):
+        """Cuenta los parámetros en una invocación de función"""
         if len(nodo.nodos) < 2:
             return []
         params_node = nodo.nodos[1]
@@ -352,6 +467,7 @@ class VerificadorSemantico:
         return [self._verificar_expresion(n) for n in params_node.nodos]
 
     def _compatibles(self, t1, t2):
+        """Verifica si dos tipos son compatibles"""
         if not t1 or not t2:
             return True
         if t1 == t2:
@@ -359,6 +475,11 @@ class VerificadorSemantico:
         return (t1, t2) in self.COMPATIBLES
 
     def _resolver_tipo(self, t1, t2):
+        """Resuelve el tipo resultante de una operación entre dos tipos"""
+        if not t1:
+            return t2
+        if not t2:
+            return t1
         if (t1, t2) in self.COMPATIBLES:
             return self.COMPATIBLES[(t1, t2)]
         if (t2, t1) in self.COMPATIBLES:
@@ -366,6 +487,7 @@ class VerificadorSemantico:
         return t1
 
     def _nuevo_ambito(self, nombre=None, tipo=None):
+        """Crea un nuevo ámbito en la pila"""
         self.pila_ambitos.append({})
         # Registrar el nuevo ámbito en el árbol
         nodo = {
@@ -378,32 +500,35 @@ class VerificadorSemantico:
         self._stack_ambitos_arbol.append(nodo)
 
     def _cerrar_ambito(self):
+        """Cierra el ámbito actual"""
         self.pila_ambitos.pop()
         # Cerrar el ámbito en el árbol
         if len(self._stack_ambitos_arbol) > 1:
             self._stack_ambitos_arbol.pop()
 
-    def _error(self, mensaje):
-        self.errores.append(f"Error semántico: {mensaje}")
+    def _error(self, mensaje, nodo=None):
+        """
+        Registra un error semántico con información de posición si está disponible.
+        
+        Parameters
+        ----------
+        mensaje : str
+            Mensaje de error
+        nodo : NodoArbol, optional
+            Nodo donde ocurrió el error (para obtener línea/columna)
+        """
+        if nodo and hasattr(nodo, 'linea') and hasattr(nodo, 'columna'):
+            error_msg = f"Error semántico (línea {nodo.linea}, col {nodo.columna}): {mensaje}"
+        else:
+            error_msg = f"Error semántico: {mensaje}"
+        
+        self.errores.append(error_msg)
 
     # ==========================================================
     # IMPRESIÓN DE TABLAS Y ÁRBOL DECORADO
     # ==========================================================
-    def _imprimir_tablas(self):
-        for i, ambito in enumerate(self.pila_ambitos):
-            print(f"\nÁmbito {i + 1}:")
-            if not ambito:
-                print("  (Vacío)")
-            for nombre, tipo in ambito.items():
-                print(f"  {nombre:<15} -> {tipo}")
-
-        if self.funciones:
-            print("\nFunciones declaradas:")
-            for nombre, (tipo_ret, params) in self.funciones.items():
-                params_txt = ", ".join(f"{t} {n}" for t, n in params)
-                print(f"  {nombre}({params_txt}) -> {tipo_ret}")
-
     def _imprimir_tablas_anidada(self):
+        """Imprime las tablas de símbolos de forma anidada"""
         def imprimir(nodo, nivel=0):
             indent = "  " * nivel
             print(f"{indent}{nodo['nombre']} ({nodo['tipo']})")
@@ -424,6 +549,7 @@ class VerificadorSemantico:
                 print(f"  {nombre}({params_txt}) -> {tipo_ret}")
 
     def _imprimir_arbol(self, nodo, prefijo="", es_ultimo=True):
+        """Imprime el árbol decorado de forma visual"""
         if nodo is None:
             return
         # Conectores estilo árbol con "palitos" ASCII
