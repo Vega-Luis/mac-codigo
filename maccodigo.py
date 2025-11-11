@@ -2,7 +2,7 @@ import sys
 from explorador import ExploradorMacCodigo
 from analizador import AnalizadorMacCodigo
 from verificador.verificador import VerificadorSemantico
-
+from calorimetro import MacCalorimetro
 
 
 def main():
@@ -53,6 +53,13 @@ def main():
     else:
         print(" Verificación semántica completada sin errores.")
 
+    # =============================================================
+    # 4️⃣ ANÁLISIS DE COMPLEJIDAD
+    # =============================================================
+    print("\n=== ANÁLISIS DE COMPLEJIDAD ===")
+    calorimetro = MacCalorimetro()
+    calorimetro.medir(analizador.asa.raiz)
+    calorimetro.imprimir_resumen()
 
 
 if __name__ == "__main__":

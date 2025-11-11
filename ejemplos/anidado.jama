@@ -1,0 +1,14 @@
+hambriento #Inicio del programa #
+cocinar:
+    torta total <- 11,
+    ¿si? total = 10:
+        servir(mayonesa).
+    ¡de otro modo!:
+        servir(ketchup).,
+    para contador <- 0 hasta 10:
+        para segundo_condador <- 0 hasta 20:
+            para tercer_contador <- 0 hasta 30:
+                servir("Contando: "; tercer_contador).
+            servir("Contando: "; segundo_condador).
+        servir("Contando: "; contador)..
+satisfecho #Fin del programa #
