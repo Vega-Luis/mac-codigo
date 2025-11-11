@@ -34,4 +34,24 @@ compilador/
 └── maccodigo.py            # Etapa de exploración (scanner / lexer)
 ```
 
+## Uso del compilador
+Ejecuta el compilador pasando un archivo fuente en MacCódigo (`.jama`). El
+proceso recorre las etapas de análisis léxico, sintáctico y verificación
+semántica.
+
+```bash
+python maccodigo.py ejemplos/saludo.jama
+```
+
+Si no se detectan errores semánticos, se puede generar el código Python
+equivalente del programa usando las siguientes opciones:
+
+- `--mostrar-python`: imprime el código traducido en la consola.
+- `--emit-python <archivo>` / `-o <archivo>`: escribe el resultado en un
+  archivo de tu elección.
+
+Como se puede ver en el siguiente ejemplo
+```bash
+python maccodigo.py ejemplos/saludo.jama --mostrar-python -o salida.py
+```
 

@@ -548,6 +548,7 @@ class AnalizadorMacCodigo:
                 self.componente_actual.texto == "("
                 or self.componente_actual.texto == "!!"
             ):
+                nodos.append(identificador)
                 return self.analizar_auxiliar_termino(nodos)
             else:
                 return identificador

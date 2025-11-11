@@ -1,20 +1,39 @@
+from __future__ import annotations
+
+import argparse
 import sys
+from pathlib import Path
+
 from explorador import ExploradorMacCodigo
 from analizador import AnalizadorMacCodigo
 from verificador.verificador import VerificadorSemantico
+from generador import GeneradorCodigoPython
 
 
 
 def main():
-    # Verificar argumentos
-    if len(sys.argv) < 2:
-        print("Error: faltan argumentos")
-        print("Uso: python maccodigo.py <archivo_fuente.jama>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description=(
+            "Ejecuta el compilador de MacCódigo y, opcionalmente, emite el "
+            "código Python equivalente generado a partir del ASA."
+        )
+    )
+    parser.add_argument("archivo_fuente", help="Ruta al archivo fuente en MacCódigo (.jama)")
+    parser.add_argument(
+        "--emit-python",
+        "-o",
+        metavar="ARCHIVO",
+        help="Escribe el código Python generado en el archivo indicado.",
+    )
+    parser.add_argument(
+        "--mostrar-python",
+        action="store_true",
+        help="Muestra el código Python generado en la salida estándar.",
+    )
 
-    # Leer archivo fuente
-    archivo_fuente = sys.argv[1]
-    with open(archivo_fuente, encoding="utf-8") as f:
+    args = parser.parse_args()
+
+    with open(args.archivo_fuente, encoding="utf-8") as f:
         codigo_fuente = f.read()
 
     # =============================================================
@@ -50,8 +69,25 @@ def main():
 
     if errores:
         print("\n".join(errores))
-    else:
-        print(" Verificación semántica completada sin errores.")
+        sys.exit(1)
+
+    print(" Verificación semántica completada sin errores.")
+
+    # =============================================================
+    # 4️⃣ GENERACIÓN DE CÓDIGO PYTHON
+    # =============================================================
+    if args.emit_python or args.mostrar_python:
+        generador = GeneradorCodigoPython(analizador.asa)
+        codigo_python = generador.generar()
+
+        if args.mostrar_python:
+            print("\n=== CÓDIGO PYTHON GENERADO ===")
+            print(codigo_python)
+
+        if args.emit_python:
+            ruta_destino = Path(args.emit_python)
+            ruta_destino.write_text(codigo_python, encoding="utf-8")
+            print(f"\n Código Python escrito en {ruta_destino.resolve()}")
 
 
 
