@@ -9,6 +9,7 @@ from analizador import AnalizadorMacCodigo
 from verificador.verificador import VerificadorSemantico
 from generador import GeneradorCodigoPython
 
+from calorimetro import MacCalorimetro
 
 
 def main():
@@ -89,6 +90,13 @@ def main():
             ruta_destino.write_text(codigo_python, encoding="utf-8")
             print(f"\n Código Python escrito en {ruta_destino.resolve()}")
 
+    # =============================================================
+    # 5️⃣ ANÁLISIS DE COMPLEJIDAD
+    # =============================================================
+    print("\n=== ANÁLISIS DE COMPLEJIDAD ===")
+    calorimetro = MacCalorimetro()
+    calorimetro.medir(analizador.asa.raiz)
+    calorimetro.imprimir_resumen()
 
 
 if __name__ == "__main__":
