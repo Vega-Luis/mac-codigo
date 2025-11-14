@@ -7,8 +7,12 @@ cocinar:
 		 ¿si? total = 10:
 			servir(mayonesa).
 		 ¡de otro modo!:
-			servir(ketchup).,
+        servir(ketchup).,
         para segundo_condador <- 0 hasta 20:
+            ¿si? total = 10:
+                servir(mayonesa).
+            ¡de otro modo!:
+                servir(ketchup).,
             servir("Contando: "; segundo_condador).
         servir("Contando: "; contador)..
 satisfecho #Fin del programa #

@@ -1,0 +1,595 @@
+hambriento
+
+# -------------------------------------------------- #
+# Simulador EXTENDIDO de MacCaja - Versión XXL #
+# -------------------------------------------------- #
+
+# -------------------------------------------------- #
+# Precios base por código de producto#
+# 1: Jamburguesa#
+# 2: Papas Medianas#
+# 3: Refresco#
+# 4: Nuggets 10pz#
+# 5: Postre de Manzana#
+# 6: Ensalada (producto extra para volumen)#
+# --------------------------------------------------#
+
+receta precioProducto(
+    torta codigo
+):
+    ¿si? codigo = 1:
+        entregar(2500).
+    ¡de otro modo!:
+        ¿si? codigo = 2:
+            entregar(1500).
+        ¡de otro modo!:
+            ¿si? codigo = 3:
+                entregar(1200).
+            ¡de otro modo!:
+                ¿si? codigo = 4:
+                    entregar(3000).
+                ¡de otro modo!:
+                    ¿si? codigo = 5:
+                        entregar(1100).
+                    ¡de otro modo!:
+                        ¿si? codigo = 6:
+                            entregar(900).
+                        ¡de otro modo!:
+                            entregar(0).
+                    .
+                .
+            .
+        .
+    .
+.
+
+receta nombreProducto(
+    torta codigo
+):
+    ¿si? codigo = 1:
+        servir("Hamburguesa").
+    ¡de otro modo!:
+        ¿si? codigo = 2:
+            servir("Papas Medianas").
+        ¡de otro modo!:
+            ¿si? codigo = 3:
+                servir("Refresco").
+            ¡de otro modo!:
+                ¿si? codigo = 4:
+                    servir("Nuggets 10pz").
+                ¡de otro modo!:
+                    ¿si? codigo = 5:
+                        servir("Postre de Manzana").
+                    ¡de otro modo!:
+                        ¿si? codigo = 6:
+                            servir("Ensalada").
+                        ¡de otro modo!:
+                            servir("Producto Desconocido").
+                    .
+                .
+            .
+        .
+    .
+.
+
+# Combos extendidos #
+# 1 -> Hamburguesa + Papas + Refresco #
+# 2 -> Nuggets + Papas + Refresco #
+# 3 -> Hamburguesa + Postre + Refresco #
+# 4 -> Combo Saludable: Ensalada + Refresco #
+
+receta precioCombo(
+    torta codigo
+):
+    ¿si? codigo = 1:
+        entregar(4300).
+    ¡de otro modo!:
+        ¿si? codigo = 2:
+            entregar(5000).
+        ¡de otro modo!:
+            ¿si? codigo = 3:
+                entregar(4200).
+            ¡de otro modo!:
+                ¿si? codigo = 4:
+                    entregar(1800).
+                ¡de otro modo!:
+                    entregar(0).
+            .
+        .
+    .
+.
+
+receta imprimirCombo(
+    torta codigo
+):
+    ¿si? codigo = 1:
+        servir("Combo Hamburguesa (H+P+R)").
+    ¡de otro modo!:
+        ¿si? codigo = 2:
+            servir("Combo Nuggets (N+P+R)").
+        ¡de otro modo!:
+            ¿si? codigo = 3:
+                servir("Combo Hamburguesa + Postre (H+Postre+R)").
+            ¡de otro modo!:
+                ¿si? codigo = 4:
+                    servir("Combo Saludable (Ensalada+R)").
+                ¡de otro modo!:
+                    servir("Combo Desconocido").
+            .
+        .
+    .
+.
+
+# IVA y descuentos #
+receta impuesto(
+    torta subtotal
+):
+    lechuga iva <- subtotal mul 0.13,
+    entregar(iva)
+.
+
+receta descuentoPorCantidad(
+    torta cantidad
+):
+    ¿si? cantidad >= 10:
+        entregar(1200).
+    ¡de otro modo!:
+        ¿si? cantidad >= 6:
+            entregar(600).
+        ¡de otro modo!:
+            ¿si? cantidad >= 3:
+                entregar(200).
+            ¡de otro modo!:
+                entregar(0).
+        .
+    .
+.
+
+# Descuento especial en hora pico: si hora entre 12 y 14 => recargo por servicio (simulado) #
+receta recargoHoraPico(
+    torta hora
+):
+    ¿si? hora >= 12:
+        ¿si? hora <= 14:
+            entregar(200). # recargo de servicio (se sumará) #
+        ¡de otro modo!:
+            entregar(0).
+        .
+    ¡de otro modo!:
+        entregar(0).
+.
+
+receta totalConImpuestoYRecargos(
+    torta subtotal ;
+    torta descuento ;
+    torta recargo
+):
+    lechuga iva <- impuesto(subtotal),
+    lechuga total <- subtotal - descuento + iva + recargo,
+    entregar(total)
+.
+
+# Puntos de lealtad: 1 punto por cada 1000 colones gastados (entregamos entero) #
+receta puntosLealtad(
+    lechuga total
+):
+    torta puntos <- total div 1000,
+    entregar(puntos)
+.
+
+# Impresión de encabezado del ticket en ASCII #
+receta imprimirEncabezado(
+    torta idOrden ;
+    torta hora
+):
+    servir("========================================"),
+    servir("  MacCaja - Ticket de Compra"),
+    servir("  Orden #: "; idOrden; "   Hora: "; hora),
+    servir("----------------------------------------")
+.
+
+# Imprime linea de producto formateada #
+receta imprimirLineaProducto(
+    torta idx ;
+    torta codigo ;
+    torta precio
+):
+    servir(idx; ". "),
+    nombreProducto(codigo),
+    servir("  -  "),
+    servir("Precio: "; precio)
+.
+
+# Procesar una orden grande: muchos productos & combos mixtos #
+receta procesarOrdenGrande(
+    torta idOrden ;
+    torta numProductos ;
+    torta numCombos ;
+    torta hora
+):
+    torta subtotal <- 0,
+    torta i <- 1,
+
+    imprimirEncabezado(idOrden; hora),
+
+    # Productos individuales #
+    para i <- 1 hasta numProductos:
+        torta codigo <- ((idOrden mul i) mod 6) + 1,   # fórmula para variar productos #
+        imprimirLineaProducto(i; codigo; precioProducto(codigo)),
+        torta p <- precioProducto(codigo),
+        subtotal <- subtotal + p.
+    ,
+
+    # Combos #
+    para i <- 1 hasta numCombos:
+        torta codigoCombo <- ((idOrden + i) mod 4) + 1,
+        servir("C."; i; ") "),
+        imprimirCombo(codigoCombo),
+        torta pc <- precioCombo(codigoCombo),
+        servir("    Precio combo: "; pc),
+        subtotal <- subtotal + pc.
+    ,
+
+    servir("----------------------------------------"),
+    servir("Subtotal: "; subtotal),
+
+    torta descuento <- descuentoPorCantidad(numProductos + numCombos),
+    servir("Descuento por cantidad: "; descuento),
+
+    torta recargo <- recargoHoraPico(hora),
+    servir("Recargo hora pico: "; recargo),
+
+    lechuga total <- totalConImpuestoYRecargos(subtotal; descuento; recargo),
+    servir("TOTAL (con IVA): "; total),
+
+    torta puntos <- puntosLealtad(total),
+    servir("Puntos de lealtad ganados: "; puntos),
+
+    servir("========================================"),
+    entregar(total)
+.
+
+# -------------------------------------------------- #
+# FUNCIONES DE AGREGADO PARA EL REPORTING (muchas impresiones)#
+# --------------------------------------------------#
+
+# Imprime líneas de separación largas repetidas (simula arte ASCII simple) #
+receta separadorLargo( torta vacia ):
+    servir("====================================================================")
+.
+
+# Imprime un reporte de ventas por producto (usa variables globales que se pasan)#
+receta reporteVentasPorProducto(
+    torta v1 ;
+    torta v2 ;
+    torta v3 ;
+    torta v4 ;
+    torta v5 ;
+    torta v6
+):
+    separadorLargo(v1),
+    servir("VENTAS POR PRODUCTO (unidades)"),
+    servir("1 Hamburguesa : "; v1),
+    servir("2 Papas      : "; v2),
+    servir("3 Refrescos  : "; v3),
+    servir("4 Nuggets    : "; v4),
+    servir("5 Postres    : "; v5),
+    servir("6 Ensaladas  : "; v6),
+    separadorLargo(v1)
+.
+
+# Informe detallado final con ranking simple (sin ordenar, solo impresión compuesta) #
+receta informeFinalCompleto(
+    torta ordenesProcesadas ;
+    lechuga recaudacionTotal ;
+    torta ventas1 ;
+    torta ventas2 ;
+    torta ventas3 ;
+    torta ventas4 ;
+    torta ventas5 ;
+    torta ventas6
+):
+    separadorLargo(ventas1),
+    servir("INFORME FINAL DEL DIA"),
+    servir("Órdenes procesadas : "; ordenesProcesadas),
+    servir("Recaudación total   : "; recaudacionTotal),
+    reporteVentasPorProducto(ventas1; ventas2; ventas3; ventas4; ventas5; ventas6),
+
+    # imprimimos un pequeño análisis #
+    servir("Analizando: mayor y menor vendido (por comprobación simple)"),
+    torta mayor <- ventas1,
+    torta menor <- ventas1,
+
+    # comparar 2..6 paso a paso #
+    ¿si? ventas2 > mayor:
+        mayor <- ventas2.
+    ¡de otro modo!:
+        ¿si? ventas2 < menor:
+            menor <- ventas2.
+    .
+
+    ¿si? ventas3 > mayor:
+        mayor <- ventas3.
+    ¡de otro modo!:
+        ¿si? ventas3 < menor:
+            menor <- ventas3.
+    .
+
+    ¿si? ventas4 > mayor:
+        mayor <- ventas4.
+    ¡de otro modo!:
+        ¿si? ventas4 < menor:
+            menor <- ventas4.
+    .
+
+    ¿si? ventas5 > mayor:
+        mayor <- ventas5.
+    ¡de otro modo!:
+        ¿si? ventas5 < menor:
+            menor <- ventas5.
+    .
+
+    ¿si? ventas6 > mayor:
+        mayor <- ventas6.
+    ¡de otro modo!:
+        ¿si? ventas6 < menor:
+            menor <- ventas6.
+    .
+
+    servir("Unidades vendidas (mayor): "; mayor),
+    servir("Unidades vendidas (menor): "; menor),
+    torta vacia <- 0,
+    separadorLargo(vacia)
+.
+
+# -------------------------------------------------- #
+# PROGRAMA PRINCIPAL - Sección cocinar #
+# -------------------------------------------------- #
+
+cocinar:
+    servir("===================================================================="),
+    servir("        MacCaja Simulador EXTREMO (Sudor y Sangre)"),
+    servir("===================================================================="),
+    servir("Iniciando simulación masiva de órdenes y reporte final..."),
+
+    # Parámetros de simulación #
+    torta totalOrdenesSimular <- 12,   # muchas órdenes para imprimir mucho #
+    torta ordenActual <- 1,
+    lechuga recaudacionTotal <- 0,
+
+    # Contadores de ventas por producto (inicializados a 0) #
+    torta ventas1 <- 0,
+    torta ventas2 <- 0,
+    torta ventas3 <- 0,
+    torta ventas4 <- 0,
+    torta ventas5 <- 0,
+    torta ventas6 <- 0,
+
+    # Inventario simulado por producto (suficiente, pero decrece) # 
+    torta inv1 <- 50,
+    torta inv2 <- 50,
+    torta inv3 <- 50,
+    torta inv4 <- 40,
+    torta inv5 <- 30,
+    torta inv6 <- 25,
+
+    # Simulación de un día: múltiples órdenes con distintos tamaños y horas #
+    para ordenActual <- 1 hasta totalOrdenesSimular:
+        # Simular hora del día (entre 10 y 20) #
+        torta hora <- (10 + (ordenActual mod 11)),
+
+        # Número de productos y combos varían por orden #
+        torta numProductos <- ((ordenActual mul 3) mod 8) + 1,
+        torta numCombos <- ((ordenActual mul 2) mod 4),
+
+        servir("----------------------------------------------------"),
+        servir("Procesando orden #"; ordenActual; "  (Hora: "; hora; ")"),
+        servir("Items simulados: productos="; numProductos; " combos="; numCombos),
+
+        # Antes de procesar, checar inventario y ajustar (reducción sencilla) #
+        # Recorremos productos simulados y reducimos inventario según fórmula #
+        torta i <- 1,
+        para i <- 1 hasta numProductos:
+            torta codigo <- ((ordenActual mul i) mod 6) + 1,
+            ¿si? codigo = 1:
+                ¿si? inv1 > 0:
+                    inv1 <- inv1 - 1,
+                    ventas1 <- ventas1 + 1.
+                ¡de otro modo!:
+                    servir("!Sin stock Hamburguesa, se reemplaza por Refresco"),
+                    ventas3 <- ventas3 + 1,
+                    inv3 <- inv3 - 1.
+                .
+            ¡de otro modo!:
+                ¿si? codigo = 2:
+                    ¿si? inv2 > 0:
+                        inv2 <- inv2 - 1,
+                        ventas2 <- ventas2 + 1.
+                    ¡de otro modo!:
+                        servir("!Sin stock Papas, se aplica descuento"),
+                        ventas2 <- ventas2. # no se suma nueva unidad #
+                    .
+                ¡de otro modo!:
+                    ¿si? codigo = 3:
+                        ¿si? inv3 > 0:
+                            inv3 <- inv3 - 1,
+                            ventas3 <- ventas3 + 1.
+                        ¡de otro modo!:
+                            servir("!Sin stock Refresco").
+                        .
+                    ¡de otro modo!:
+                        ¿si? codigo = 4:
+                            ¿si? inv4 > 0:
+                                inv4 <- inv4 - 1,
+                                ventas4 <- ventas4 + 1.
+                            ¡de otro modo!:
+                                servir("!Sin stock Nuggets").
+                            .
+                        ¡de otro modo!:
+                            ¿si? codigo = 5:
+                                ¿si? inv5 > 0:
+                                    inv5 <- inv5 - 1,
+                                    ventas5 <- ventas5 + 1.
+                                ¡de otro modo!:
+                                    servir("!Sin stock Postre").
+                                .
+                            ¡de otro modo!:
+                                ¿si? codigo = 6:
+                                    ¿si? inv6 > 0:
+                                        inv6 <- inv6 - 1,
+                                        ventas6 <- ventas6 + 1.
+                                    ¡de otro modo!:
+                                        servir("!Sin stock Ensalada").
+                                    .
+                                .
+                            .
+                        .
+                    .
+                .
+            .
+        .
+
+        # Procesar combos y afectar inventario similarmente #
+        torta i <- 1,
+        para i <- 1 hasta numCombos:
+            torta codigoCombo <- ((ordenActual + i) mod 4) + 1,
+            servir("Procesando combo interno: "),
+            imprimirCombo(codigoCombo),
+
+            # Cada combo consume productos: simple mapping #
+            ¿si? codigoCombo = 1:
+                # H+P+R => resta 1 a inv1, inv2, inv3 si hay stock #
+                ¿si? inv1 > 0:
+                    inv1 <- inv1 - 1,
+                    ventas1 <- ventas1 + 1
+                .
+                ¡de otro modo!:
+                    servir("  !Falta Hamburguesa para combo")
+                .
+                ¿si? inv2 > 0:
+                    inv2 <- inv2 - 1,
+                    ventas2 <- ventas2 + 1
+                .
+                ¡de otro modo!:
+                    servir("  !Falta Papas para combo")
+                .
+                ¿si? inv3 > 0:
+                    inv3 <- inv3 - 1,
+                    ventas3 <- ventas3 + 1
+                .
+                ¡de otro modo!:
+                    servir("  !Falta Refresco para combo")
+                .
+            .
+            ¡de otro modo!:
+                ¿si? codigoCombo = 2:
+                    # N+P+R #
+                    ¿si? inv4 > 0:
+                        inv4 <- inv4 - 1,
+                        ventas4 <- ventas4 + 1
+                    .
+                    ¡de otro modo!:
+                        servir("  !Falta Nuggets para combo")
+                    .
+
+                    ¿si? inv2 > 0:
+                        inv2 <- inv2 - 1,
+                        ventas2 <- ventas2 + 1
+                    .
+                    ¡de otro modo!:
+                        servir("  !Falta Papas para combo")
+                    .
+                    ¿si? inv3 > 0:
+                        inv3 <- inv3 - 1,
+                        ventas3 <- ventas3 + 1
+                    .
+                    ¡de otro modo!:
+                        servir("  !Falta Refresco para combo")
+                    .
+                .
+                ¡de otro modo!:
+                    ¿si? codigoCombo = 3:
+                        # H + Postre + R #
+                        ¿si? inv1 > 0:
+                            inv1 <- inv1 - 1,
+                            ventas1 <- ventas1 + 1
+                        .
+                        ¡de otro modo!:
+                            servir("  !Falta Hamburguesa para combo")
+                        .
+
+                        ¿si? inv5 > 0:
+                            inv5 <- inv5 - 1,
+                            ventas5 <- ventas5 + 1
+                        .
+                        ¡de otro modo!:
+                            servir("  !Falta Postre para combo")
+                        .
+
+                        ¿si? inv3 > 0:
+                            inv3 <- inv3 - 1,
+                            ventas3 <- ventas3 + 1
+                        .
+                        ¡de otro modo!:
+                            servir("  !Falta Refresco para combo")
+                        .
+                    .
+                    ¡de otro modo!:
+                        ¿si? codigoCombo = 4:
+                            # Ensalada + Refresco #
+                            ¿si? inv6 > 0:
+                                inv6 <- inv6 - 1,
+                                ventas6 <- ventas6 + 1
+                            .
+                            ¡de otro modo!:
+                                servir("  !Falta Ensalada para combo")
+                            .
+                            ¿si? inv3 > 0:
+                                inv3 <- inv3 - 1,
+                                ventas3 <- ventas3 + 1
+                            .
+                            ¡de otro modo!:
+                                servir("  !Falta Refresco para combo")
+                            .
+                        .
+                    .
+                .
+            .
+        .
+
+        # Finalmente calculamos el total monetario llamando a procesarOrdenGrande #
+        lechuga totalOrden <- procesarOrdenGrande(ordenActual; numProductos; numCombos; hora),
+
+        servir("Resultado monetario orden #"; ordenActual; " => "; totalOrden),
+
+        # Acumular recaudación #
+        recaudacionTotal <- recaudacionTotal + totalOrden,
+
+        # Pequeño reporte intermedio cada 3 órdenes #
+        lechuga r <- ordenActual,
+        r <- r mod 3,
+        ¿si? r = 0:
+            servir(">>> REPORTE INTERMEDIO: luego de orden "; ordenActual),
+            servir("Recaudación parcial: "; recaudacionTotal),
+            reporteVentasPorProducto(ventas1; ventas2; ventas3; ventas4; ventas5; ventas6)
+        .
+        ¡de otro modo!:
+            servir("Continuando simulación...")
+        .
+
+
+    # Fin del loop de órdenes - cierre de caja completo #
+    informeFinalCompleto(totalOrdenesSimular; recaudacionTotal; ventas1; ventas2; ventas3; ventas4; ventas5; ventas6),
+
+    servir("STOCK FINAL DISPONIBLE:"),
+    servir("1 Hamburguesa : "; inv1),
+    servir("2 Papas      : "; inv2),
+    servir("3 Refrescos  : "; inv3),
+    servir("4 Nuggets    : "; inv4),
+    servir("5 Postres    : "; inv5),
+    servir("6 Ensaladas  : "; inv6),
+
+    servir("Simulación finalizada. Muchas impresiones generadas!")
+.
+
+satisfecho

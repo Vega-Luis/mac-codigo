@@ -1,0 +1,25 @@
+hambriento #Inicio del programa #
+cocinar:
+    torta contador <-0,
+    para contador <- 0 hasta 10:
+        para contador <- 0 hasta 10:
+            para contador <- 0 hasta 10:
+                para contador <- 0 hasta 10:
+                    para contador <- 0 hasta 10:
+                        para contador <- 0 hasta 10:
+                            para contador <- 0 hasta 10:
+                                para contador <- 0 hasta 10:
+                                    para contador <- 0 hasta 10:
+                                        para contador <- 0 hasta 10:
+                                            servir("Contando: "; contador).
+                                        servir("Contando: "; contador).
+                                    servir("Contando: "; contador).
+                                servir("Contando: "; contador).
+                            servir("Contando: "; contador).
+                        servir("Contando: "; contador).
+                    servir("Contando: "; contador).
+                servir("Contando: "; contador).
+            servir("Contando: "; contador).
+        servir("Contando: "; contador)..
+satisfecho #Fin del programa #
+

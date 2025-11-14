@@ -1,6 +1,7 @@
 hambriento #Inicio del programa #
 cocinar:
     torta numero <- 7,
+    torta i <- 0,
     
     servir("Tabla de multiplicar del: "; numero),
     
